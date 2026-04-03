@@ -353,7 +353,7 @@ app.post('/api/export/pdf', async (req, res) => {
             size: 'A4',
             margin: 30,
             info: {
-                Title: title || 'PECS Карточки',
+                Title: title || 'PECS Cards',
                 Author: 'NeuroVisual Helper'
             }
         });
@@ -362,14 +362,29 @@ app.post('/api/export/pdf', async (req, res) => {
         res.setHeader('Content-Disposition', 'attachment; filename="cards_' + Date.now() + '.pdf"');
         doc.pipe(res);
 
-        const pageW = doc.page.width - 60; // минус margins
+        // Подключаем шрифт с кириллицей
+        const fontRegular = path.join(__dirname, 'fonts', 'Roboto-Regular.ttf');
+        const fontBold = path.join(__dirname, 'fonts', 'Roboto-Bold.ttf');
+        const hasFont = fs.existsSync(fontRegular);
+
+        if (hasFont) {
+            doc.registerFont('Regular', fontRegular);
+            doc.registerFont('Bold', fs.existsSync(fontBold) ? fontBold : fontRegular);
+        } else {
+            // Фоллбэк — встроенный шрифт (без кириллицы)
+            doc.registerFont('Regular', 'Helvetica');
+            doc.registerFont('Bold', 'Helvetica-Bold');
+            console.log('[PDF] ⚠️ Шрифт Roboto не найден, кириллица может не работать');
+        }
+
+        const pageW = doc.page.width - 60;
         const pageH = doc.page.height - 60;
 
         // Заголовок
-        doc.fontSize(24).font('Helvetica-Bold');
-        doc.text(title || 'PECS Карточки', 30, 30, { align: 'center', width: pageW });
+        doc.font('Bold').fontSize(24);
+        doc.text(title || 'PECS Cards', 30, 30, { align: 'center', width: pageW });
         doc.moveDown(0.5);
-        doc.fontSize(12).font('Helvetica');
+        doc.font('Regular').fontSize(12);
         doc.text('Создано: ' + new Date().toLocaleDateString('ru-RU'), { align: 'center', width: pageW });
         doc.text('NeuroVisual Helper', { align: 'center', width: pageW });
         doc.moveDown(1);
@@ -377,7 +392,7 @@ app.post('/api/export/pdf', async (req, res) => {
         // Сетка карточек
         const cols = type === 'story' ? 2 : 3;
         const cardW = (pageW - (cols - 1) * 15) / cols;
-        const cardH = cardW + 40; // квадрат + место для текста
+        const cardH = cardW + 40;
         const gap = 15;
 
         let x = 30;
@@ -402,6 +417,7 @@ app.post('/api/export/pdf', async (req, res) => {
                .stroke();
 
             // Картинка
+            let hasImage = false;
             if (card.imageUrl && !card.imageUrl.startsWith('http')) {
                 const imgPath = path.join(__dirname, 'public', card.imageUrl);
                 if (fs.existsSync(imgPath)) {
@@ -412,34 +428,39 @@ app.post('/api/export/pdf', async (req, res) => {
                             height: imgSize,
                             fit: [imgSize, imgSize]
                         });
+                        hasImage = true;
                     } catch (e) {
-                        // Если картинка не загрузилась — рисуем эмодзи-заглушку
-                        doc.fontSize(40).text(card.emoji || '🖼️', x, y + cardW / 3, {
-                            width: cardW, align: 'center'
-                        });
+                        console.log('[PDF] Ошибка картинки:', e.message);
                     }
-                } else {
-                    doc.fontSize(40).text(card.emoji || '🖼️', x, y + cardW / 3, {
-                        width: cardW, align: 'center'
-                    });
                 }
-            } else {
-                // Нет картинки — показываем эмодзи
-                doc.fontSize(40).text(card.emoji || '🖼️', x, y + cardW / 3, {
-                    width: cardW, align: 'center'
-                });
             }
 
-            // Текст под картинкой
+            if (!hasImage) {
+                // Заглушка — серый квадрат с текстом
+                const imgSize = cardW - 16;
+                doc.roundedRect(x + 8, y + 8, imgSize, imgSize, 6)
+                   .fillColor('#f0f0f0')
+                   .fill();
+                doc.fillColor('#999999')
+                   .font('Regular')
+                   .fontSize(14)
+                   .text(card.emoji || '?', x + 8, y + 8 + imgSize / 2 - 10, {
+                       width: imgSize,
+                       align: 'center'
+                   });
+            }
+
+            // Подпись под картинкой
             const textY = y + cardW - 5;
             doc.roundedRect(x + 2, textY, cardW - 4, 36, 4)
                .fillColor('#667eea')
                .fill();
 
+            const cardText = card.text || card.scene || card.emotion || '';
             doc.fillColor('#ffffff')
+               .font('Bold')
                .fontSize(cardW > 150 ? 13 : 10)
-               .font('Helvetica-Bold')
-               .text(card.text || card.step || '', x + 5, textY + 8, {
+               .text(cardText, x + 5, textY + 8, {
                    width: cardW - 10,
                    align: 'center',
                    lineBreak: false
@@ -450,7 +471,7 @@ app.post('/api/export/pdf', async (req, res) => {
             // Номер шага (для историй)
             if (type === 'story' && card.step) {
                 doc.circle(x + 18, y + 18, 14).fillColor('#48bb78').fill();
-                doc.fillColor('#ffffff').fontSize(12).font('Helvetica-Bold')
+                doc.fillColor('#ffffff').font('Bold').fontSize(12)
                    .text(String(card.step), x + 8, y + 12, { width: 20, align: 'center' });
                 doc.fillColor('#000000');
             }
@@ -466,33 +487,34 @@ app.post('/api/export/pdf', async (req, res) => {
             }
         }
 
-        // Линия разреза (пунктир) — помощь для вырезания
+        // Последняя страница — инструкция
         doc.addPage();
-        doc.fontSize(18).font('Helvetica-Bold')
-           .text('✂️ Инструкция', 30, 30, { width: pageW });
+        doc.font('Bold').fontSize(18).fillColor('#000000');
+        doc.text('Инструкция', 30, 30, { width: pageW });
         doc.moveDown(0.5);
-        doc.fontSize(13).font('Helvetica')
-           .text('1. Распечатайте предыдущие страницы на плотной бумаге (картоне)', { width: pageW })
-           .moveDown(0.3)
-           .text('2. Вырежьте карточки по рамкам', { width: pageW })
-           .moveDown(0.3)
-           .text('3. По желанию заламинируйте для долговечности', { width: pageW })
-           .moveDown(0.3)
-           .text('4. Приклейте липучки Velcro на обратную сторону', { width: pageW })
-           .moveDown(0.3)
-           .text('5. Используйте с доской PECS для общения!', { width: pageW })
-           .moveDown(1);
+        doc.font('Regular').fontSize(13);
+        doc.text('1. Распечатайте на плотной бумаге (картоне)', { width: pageW });
+        doc.moveDown(0.3);
+        doc.text('2. Вырежьте карточки по рамкам', { width: pageW });
+        doc.moveDown(0.3);
+        doc.text('3. Заламинируйте для долговечности', { width: pageW });
+        doc.moveDown(0.3);
+        doc.text('4. Приклейте липучки Velcro на обратную сторону', { width: pageW });
+        doc.moveDown(0.3);
+        doc.text('5. Используйте с доской PECS для общения!', { width: pageW });
+        doc.moveDown(1.5);
 
-        doc.fontSize(11).fillColor('#718096')
-           .text('Создано с помощью NeuroVisual Helper', { width: pageW, align: 'center' })
-           .text('https://neurovisual-helper.onrender.com', { width: pageW, align: 'center' });
+        doc.fontSize(11).fillColor('#718096');
+        doc.text('NeuroVisual Helper', { width: pageW, align: 'center' });
 
         doc.end();
-        console.log('[PDF] ✅ Экспорт ' + cards.length + ' карточек');
+        console.log('[PDF] Экспорт ' + cards.length + ' карточек');
 
     } catch (err) {
         console.error('[PDF] Ошибка:', err);
-        res.status(500).json({ error: 'Ошибка создания PDF: ' + err.message });
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Ошибка PDF: ' + err.message });
+        }
     }
 });
 
