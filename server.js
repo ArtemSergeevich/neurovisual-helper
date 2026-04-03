@@ -337,6 +337,176 @@ app.post('/api/generate/calming', async (req, res) => {
 });
 
 // ============================================
+// ЭКСПОРТ В PDF
+// ============================================
+const PDFDocument = require('pdfkit');
+
+app.post('/api/export/pdf', async (req, res) => {
+    const { cards, title, type } = req.body;
+
+    if (!cards || !cards.length) {
+        return res.status(400).json({ error: 'Нет карточек для экспорта' });
+    }
+
+    try {
+        const doc = new PDFDocument({
+            size: 'A4',
+            margin: 30,
+            info: {
+                Title: title || 'PECS Карточки',
+                Author: 'NeuroVisual Helper'
+            }
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename="cards_' + Date.now() + '.pdf"');
+        doc.pipe(res);
+
+        const pageW = doc.page.width - 60; // минус margins
+        const pageH = doc.page.height - 60;
+
+        // Заголовок
+        doc.fontSize(24).font('Helvetica-Bold');
+        doc.text(title || 'PECS Карточки', 30, 30, { align: 'center', width: pageW });
+        doc.moveDown(0.5);
+        doc.fontSize(12).font('Helvetica');
+        doc.text('Создано: ' + new Date().toLocaleDateString('ru-RU'), { align: 'center', width: pageW });
+        doc.text('NeuroVisual Helper', { align: 'center', width: pageW });
+        doc.moveDown(1);
+
+        // Сетка карточек
+        const cols = type === 'story' ? 2 : 3;
+        const cardW = (pageW - (cols - 1) * 15) / cols;
+        const cardH = cardW + 40; // квадрат + место для текста
+        const gap = 15;
+
+        let x = 30;
+        let y = doc.y;
+        let col = 0;
+
+        for (let i = 0; i < cards.length; i++) {
+            const card = cards[i];
+
+            // Новая страница если не помещается
+            if (y + cardH > pageH + 30) {
+                doc.addPage();
+                y = 30;
+                col = 0;
+                x = 30;
+            }
+
+            // Рамка карточки
+            doc.roundedRect(x, y, cardW, cardH, 8)
+               .lineWidth(2)
+               .strokeColor('#667eea')
+               .stroke();
+
+            // Картинка
+            if (card.imageUrl && !card.imageUrl.startsWith('http')) {
+                const imgPath = path.join(__dirname, 'public', card.imageUrl);
+                if (fs.existsSync(imgPath)) {
+                    try {
+                        const imgSize = cardW - 16;
+                        doc.image(imgPath, x + 8, y + 8, {
+                            width: imgSize,
+                            height: imgSize,
+                            fit: [imgSize, imgSize]
+                        });
+                    } catch (e) {
+                        // Если картинка не загрузилась — рисуем эмодзи-заглушку
+                        doc.fontSize(40).text(card.emoji || '🖼️', x, y + cardW / 3, {
+                            width: cardW, align: 'center'
+                        });
+                    }
+                } else {
+                    doc.fontSize(40).text(card.emoji || '🖼️', x, y + cardW / 3, {
+                        width: cardW, align: 'center'
+                    });
+                }
+            } else {
+                // Нет картинки — показываем эмодзи
+                doc.fontSize(40).text(card.emoji || '🖼️', x, y + cardW / 3, {
+                    width: cardW, align: 'center'
+                });
+            }
+
+            // Текст под картинкой
+            const textY = y + cardW - 5;
+            doc.roundedRect(x + 2, textY, cardW - 4, 36, 4)
+               .fillColor('#667eea')
+               .fill();
+
+            doc.fillColor('#ffffff')
+               .fontSize(cardW > 150 ? 13 : 10)
+               .font('Helvetica-Bold')
+               .text(card.text || card.step || '', x + 5, textY + 8, {
+                   width: cardW - 10,
+                   align: 'center',
+                   lineBreak: false
+               });
+
+            doc.fillColor('#000000');
+
+            // Номер шага (для историй)
+            if (type === 'story' && card.step) {
+                doc.circle(x + 18, y + 18, 14).fillColor('#48bb78').fill();
+                doc.fillColor('#ffffff').fontSize(12).font('Helvetica-Bold')
+                   .text(String(card.step), x + 8, y + 12, { width: 20, align: 'center' });
+                doc.fillColor('#000000');
+            }
+
+            // Следующая колонка
+            col++;
+            if (col >= cols) {
+                col = 0;
+                x = 30;
+                y += cardH + gap;
+            } else {
+                x += cardW + gap;
+            }
+        }
+
+        // Линия разреза (пунктир) — помощь для вырезания
+        doc.addPage();
+        doc.fontSize(18).font('Helvetica-Bold')
+           .text('✂️ Инструкция', 30, 30, { width: pageW });
+        doc.moveDown(0.5);
+        doc.fontSize(13).font('Helvetica')
+           .text('1. Распечатайте предыдущие страницы на плотной бумаге (картоне)', { width: pageW })
+           .moveDown(0.3)
+           .text('2. Вырежьте карточки по рамкам', { width: pageW })
+           .moveDown(0.3)
+           .text('3. По желанию заламинируйте для долговечности', { width: pageW })
+           .moveDown(0.3)
+           .text('4. Приклейте липучки Velcro на обратную сторону', { width: pageW })
+           .moveDown(0.3)
+           .text('5. Используйте с доской PECS для общения!', { width: pageW })
+           .moveDown(1);
+
+        doc.fontSize(11).fillColor('#718096')
+           .text('Создано с помощью NeuroVisual Helper', { width: pageW, align: 'center' })
+           .text('https://neurovisual-helper.onrender.com', { width: pageW, align: 'center' });
+
+        doc.end();
+        console.log('[PDF] ✅ Экспорт ' + cards.length + ' карточек');
+
+    } catch (err) {
+        console.error('[PDF] Ошибка:', err);
+        res.status(500).json({ error: 'Ошибка создания PDF: ' + err.message });
+    }
+});
+
+// Экспорт отдельной карточки как PNG
+app.get('/api/export/png/:filename', (req, res) => {
+    const filepath = path.join(GEN_DIR, req.params.filename);
+    if (fs.existsSync(filepath)) {
+        res.download(filepath);
+    } else {
+        res.status(404).json({ error: 'Файл не найден' });
+    }
+});
+
+// ============================================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log('');

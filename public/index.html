@@ -588,5 +588,177 @@ document.addEventListener('DOMContentLoaded',function(){
     loadData();
 });
 </script>
+<script>
+// ============================================
+// ЭКСПОРТ ФУНКЦИИ
+// ============================================
+
+// Скачать PDF из карточек
+async function exportPDF(cards, title, type) {
+    if (!cards || !cards.length) {
+        alert('Сначала сгенерируйте карточки!');
+        return;
+    }
+
+    const btn = event.target;
+    const oldText = btn.textContent;
+    btn.textContent = '⏳ Создаём PDF...';
+    btn.disabled = true;
+
+    try {
+        const res = await fetch('/api/export/pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ cards, title, type })
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || 'Ошибка');
+        }
+
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (title || 'cards') + '_' + Date.now() + '.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        btn.textContent = '✅ Скачано!';
+        setTimeout(() => { btn.textContent = oldText; btn.disabled = false; }, 2000);
+    } catch (err) {
+        alert('Ошибка: ' + err.message);
+        btn.textContent = oldText;
+        btn.disabled = false;
+    }
+}
+
+// Скачать одну картинку
+function downloadImage(imageUrl, name) {
+    const a = document.createElement('a');
+    a.href = imageUrl;
+    a.download = (name || 'card') + '.jpg';
+    a.click();
+}
+
+// Хранилище последних сгенерированных карточек
+let lastPecsCards = [];
+let lastStorySteps = [];
+let lastEmotionCard = null;
+let lastCalmingCard = null;
+
+// Перехватываем результаты генерации — добавляем кнопки экспорта
+const _origFetch = window.fetch;
+window.fetch = async function(...args) {
+    const res = await _origFetch.apply(this, args);
+
+    // Клонируем ответ чтобы прочитать тело
+    const clone = res.clone();
+
+    try {
+        const url = typeof args[0] === 'string' ? args[0] : args[0].url;
+
+        if (url && url.includes('/api/generate/')) {
+            const data = await clone.json();
+
+            if (url.includes('/pecs') && data.cards) {
+                lastPecsCards = data.cards;
+                setTimeout(() => addExportButton('pecs'), 500);
+            }
+            if (url.includes('/story') && data.steps) {
+                lastStorySteps = data.steps;
+                setTimeout(() => addExportButton('story'), 500);
+            }
+            if (url.includes('/emotion') && data.imageUrl) {
+                lastEmotionCard = data;
+                setTimeout(() => addExportButton('emotion'), 500);
+            }
+            if (url.includes('/calming') && data.imageUrl) {
+                lastCalmingCard = data;
+                setTimeout(() => addExportButton('calming'), 500);
+            }
+        }
+    } catch (e) {}
+
+    return res;
+};
+
+function addExportButton(type) {
+    // Удаляем старую кнопку если есть
+    const oldBtn = document.getElementById('export-btn-' + type);
+    if (oldBtn) oldBtn.remove();
+
+    let container, cards, title, cardType;
+
+    switch (type) {
+        case 'pecs':
+            container = document.getElementById('pr') || document.querySelector('[id*="pecs"] .cg, [id*="pecs"] .cards')?.parentElement;
+            cards = lastPecsCards;
+            title = 'PECS Карточки';
+            cardType = 'pecs';
+            break;
+        case 'story':
+            container = document.getElementById('str') || document.querySelector('[id*="stor"] .cg, [id*="stor"] .cards')?.parentElement;
+            cards = lastStorySteps;
+            title = 'Социальная история';
+            cardType = 'story';
+            break;
+        case 'emotion':
+            container = document.getElementById('er') || document.querySelector('[id*="emo"] .sr')?.parentElement;
+            cards = lastEmotionCard ? [lastEmotionCard] : [];
+            title = 'Эмоция - ' + (lastEmotionCard?.emotion || '');
+            cardType = 'emotion';
+            break;
+        case 'calming':
+            container = document.getElementById('cr') || document.querySelector('[id*="calm"] .sr')?.parentElement;
+            cards = lastCalmingCard ? [lastCalmingCard] : [];
+            title = 'Успокоение - ' + (lastCalmingCard?.scene || '');
+            cardType = 'calming';
+            break;
+    }
+
+    if (!container || !cards || !cards.length) return;
+
+    // Создаём панель экспорта
+    const panel = document.createElement('div');
+    panel.id = 'export-btn-' + type;
+    panel.style.cssText = 'display:flex;gap:10px;margin-top:15px;padding:15px;background:linear-gradient(135deg,#f0f4ff,#faf0ff);border:2px solid #667eea;border-radius:12px;flex-wrap:wrap;align-items:center';
+
+    panel.innerHTML = `
+        <span style="font-size:20px">📄</span>
+        <span style="font-weight:600;color:#4a5568;font-size:14px">Экспорт:</span>
+        <button onclick="exportPDF(${JSON.stringify(cards).replace(/"/g, '&quot;')}, '${title}', '${cardType}')" 
+                style="padding:10px 20px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s">
+            📄 Скачать PDF
+        </button>
+        <button onclick="exportAllImages()" 
+                style="padding:10px 20px;background:linear-gradient(135deg,#48bb78,#38a169);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s">
+            🖼️ Скачать картинки
+        </button>
+        <span style="font-size:12px;color:#718096">${cards.length} шт.</span>
+    `;
+
+    container.appendChild(panel);
+}
+
+function exportAllImages() {
+    const allCards = [...lastPecsCards, ...lastStorySteps];
+    if (lastEmotionCard) allCards.push(lastEmotionCard);
+    if (lastCalmingCard) allCards.push(lastCalmingCard);
+
+    let count = 0;
+    allCards.forEach((card, i) => {
+        if (card.imageUrl) {
+            setTimeout(() => {
+                downloadImage(card.imageUrl, (card.text || card.scene || card.emotion || 'card') + '_' + i);
+            }, i * 500);
+            count++;
+        }
+    });
+
+    if (count === 0) alert('Нет картинок для скачивания. Сначала сгенерируйте с картинками!');
+}
+</script>
 </body>
 </html>
