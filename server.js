@@ -1,485 +1,355 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+const fetch = require('node-fetch');
+const https = require('https');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static('public'));
 
+const GEN_DIR = path.join(__dirname, 'public', 'generated');
+if (!fs.existsSync(GEN_DIR)) fs.mkdirSync(GEN_DIR, { recursive: true });
+
+const AUTH_KEY = process.env.GIGACHAT_AUTH_KEY;
+
+// Отключаем проверку SSL (GigaChat использует свои сертификаты)
+const agent = new https.Agent({ rejectUnauthorized: false });
+
 // ============================================
-// БАЗА ДАННЫХ ПРОМПТОВ ДЛЯ PECS-КАРТОЧЕК
+// GIGACHAT AUTH — получаем Access Token
+// ============================================
+let accessToken = null;
+let tokenExpires = 0;
+
+async function getAccessToken() {
+    // Если токен ещё живой — возвращаем его
+    if (accessToken && Date.now() < tokenExpires - 60000) {
+        return accessToken;
+    }
+
+    console.log('[GigaChat] Получаем новый Access Token...');
+
+    const res = await fetch('https://ngw.devices.sberbank.ru:9443/api/v2/oauth', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+            'RqUID': generateUID(),
+            'Authorization': 'Basic ' + AUTH_KEY
+        },
+        body: 'scope=GIGACHAT_API_PERS',
+        agent: agent
+    });
+
+    const data = await res.json();
+
+    if (data.access_token) {
+        accessToken = data.access_token;
+        tokenExpires = data.expires_at || (Date.now() + 1800000); // 30 минут
+        console.log('[GigaChat] ✅ Токен получен!');
+        return accessToken;
+    }
+
+    console.error('[GigaChat] ❌ Ошибка токена:', data);
+    throw new Error('Не удалось получить токен: ' + JSON.stringify(data));
+}
+
+function generateUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+}
+
+// ============================================
+// ГЕНЕРАЦИЯ КАРТИНКИ ЧЕРЕЗ GIGACHAT
+// ============================================
+async function generateImage(prompt) {
+    if (!AUTH_KEY) {
+        return { success: false, error: 'Ключ не настроен. Добавьте GIGACHAT_AUTH_KEY в .env' };
+    }
+
+    try {
+        const token = await getAccessToken();
+
+        console.log('[GigaChat] Генерация: ' + prompt.substring(0, 60) + '...');
+
+        // Отправляем запрос на генерацию картинки
+        const res = await fetch('https://gigachat.devices.sberbank.ru/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                model: 'GigaChat',
+                messages: [
+                    {
+                        role: 'user',
+                        content: 'Нарисуй: ' + prompt
+                    }
+                ],
+                function_call: 'auto'
+            }),
+            agent: agent
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            console.error('[GigaChat] Ошибка:', data);
+            return { success: false, error: data.message || 'Ошибка ' + res.status };
+        }
+
+        // Ищем картинку в ответе
+        const content = data.choices?.[0]?.message?.content || '';
+        console.log('[GigaChat] Ответ получен, ищем картинку...');
+
+        // GigaChat возвращает картинку как <img src="..."> в тексте
+        const imgMatch = content.match(/<img\s+src="([^"]+)"/);
+
+        if (imgMatch && imgMatch[1]) {
+            const fileId = imgMatch[1];
+            console.log('[GigaChat] Найден файл: ' + fileId);
+
+            // Скачиваем картинку
+            const imgRes = await fetch('https://gigachat.devices.sberbank.ru/api/v1/files/' + fileId + '/content', {
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Accept': 'application/jpg'
+                },
+                agent: agent
+            });
+
+            if (!imgRes.ok) {
+                return { success: false, error: 'Не удалось скачать картинку: ' + imgRes.status };
+            }
+
+            const buffer = Buffer.from(await imgRes.arrayBuffer());
+            const filename = 'gc_' + Date.now() + '_' + Math.random().toString(36).substring(7) + '.jpg';
+            fs.writeFileSync(path.join(GEN_DIR, filename), buffer);
+
+            console.log('[GigaChat] ✅ Сохранено: ' + filename + ' (' + Math.round(buffer.length / 1024) + ' KB)');
+            return { success: true, imageUrl: '/generated/' + filename };
+        }
+
+        // Если картинки нет в ответе
+        console.log('[GigaChat] Картинка не найдена в ответе. Контент:', content.substring(0, 200));
+        return { success: false, error: 'GigaChat не вернул картинку. Попробуйте ещё раз.' };
+
+    } catch (err) {
+        console.error('[GigaChat] Ошибка:', err.message);
+        return { success: false, error: err.message };
+    }
+}
+
+// ============================================
+// БАЗА ПРОМПТОВ (РУССКИЙ — GigaChat отлично понимает!)
 // ============================================
 const pecsTemplates = {
-  'хочу пить': {
-    prompt: 'A clear glass of drinking water, minimalist illustration, white background, simple clean vector style, no text, centered',
-    emoji: '💧'
-  },
-  'хочу есть': {
-    prompt: 'A plate with simple food and fork, minimalist illustration, white background, simple clean vector style, no text, centered',
-    emoji: '🍽️'
-  },
-  'туалет': {
-    prompt: 'A clean toilet symbol, simple bathroom icon, minimalist illustration, white background, no text, centered',
-    emoji: '🚽'
-  },
-  'играть': {
-    prompt: 'Colorful building blocks toys, minimalist illustration, white background, simple clean style, no text, centered',
-    emoji: '🧩'
-  },
-  'гулять': {
-    prompt: 'A person walking outside in sunshine with trees, minimalist illustration, white background, simple clean style, no text',
-    emoji: '🚶'
-  },
-  'спать': {
-    prompt: 'A person sleeping peacefully in bed with pillow, minimalist illustration, white background, simple style, no text',
-    emoji: '😴'
-  },
-  'помощь': {
-    prompt: 'A raised hand asking for help, help gesture, minimalist illustration, white background, simple clean style, no text',
-    emoji: '🙋'
-  },
-  'да': {
-    prompt: 'Green checkmark and thumbs up, approval symbol, minimalist illustration, white background, simple clean style, no text',
-    emoji: '✅'
-  },
-  'нет': {
-    prompt: 'Red X mark, gentle refusal symbol, minimalist illustration, white background, simple clean style, no text',
-    emoji: '❌'
-  },
-  'больно': {
-    prompt: 'A person pointing to pain location with sad face, medical help needed, minimalist illustration, white background, no text',
-    emoji: '🤕'
-  },
-  'мама': {
-    prompt: 'A caring mother figure smiling warmly, minimalist illustration, white background, simple clean style, no text',
-    emoji: '👩'
-  },
-  'папа': {
-    prompt: 'A caring father figure smiling warmly, minimalist illustration, white background, simple clean style, no text',
-    emoji: '👨'
-  },
-  'музыка': {
-    prompt: 'Headphones with musical notes floating around, minimalist illustration, white background, simple clean style, no text',
-    emoji: '🎵'
-  },
-  'обнять': {
-    prompt: 'Two people hugging warmly with love, minimalist illustration, white background, simple clean style, no text',
-    emoji: '🤗'
-  },
-  'устал': {
-    prompt: 'A tired person yawning, sleepy face, minimalist illustration, white background, simple clean style, no text',
-    emoji: '😫'
-  },
-  'стоп': {
-    prompt: 'Stop hand gesture, clear red stop sign, minimalist illustration, white background, simple clean style, no text',
-    emoji: '✋'
-  },
-  'школа': {
-    prompt: 'A simple school building with windows and door, minimalist illustration, white background, clean style, no text',
-    emoji: '🏫'
-  },
-  'дом': {
-    prompt: 'A cozy house with roof and door, home symbol, minimalist illustration, white background, clean style, no text',
-    emoji: '🏠'
-  },
-  'читать': {
-    prompt: 'An open book with pages, reading activity, minimalist illustration, white background, clean style, no text',
-    emoji: '📖'
-  },
-  'рисовать': {
-    prompt: 'Crayons and paper with simple drawing, art activity, minimalist illustration, white background, clean style, no text',
-    emoji: '🖍️'
-  },
-  'мыть руки': {
-    prompt: 'Hands being washed with soap and water under faucet, hygiene, minimalist illustration, white background, no text',
-    emoji: '🧼'
-  },
-  'чистить зубы': {
-    prompt: 'Toothbrush with toothpaste, dental hygiene, minimalist illustration, white background, clean style, no text',
-    emoji: '🪥'
-  },
-  'одеваться': {
-    prompt: 'Shirt and pants clothing, getting dressed, minimalist illustration, white background, clean style, no text',
-    emoji: '👕'
-  },
-  'друг': {
-    prompt: 'Two children playing together happily, friendship, minimalist illustration, white background, clean style, no text',
-    emoji: '👫'
-  },
-  'врач': {
-    prompt: 'Friendly doctor with stethoscope smiling, minimalist illustration, white background, clean style, no text',
-    emoji: '👨‍⚕️'
-  },
-  'купаться': {
-    prompt: 'A bathtub with warm water and bubbles, bath time, minimalist illustration, white background, clean style, no text',
-    emoji: '🛁'
-  },
-  'ждать': {
-    prompt: 'A clock and a patient person sitting calmly, waiting, minimalist illustration, white background, clean style, no text',
-    emoji: '⏰'
-  },
-  'тихо': {
-    prompt: 'A finger on lips, quiet gesture, silence symbol, minimalist illustration, white background, clean style, no text',
-    emoji: '🤫'
-  },
-  'слушать': {
-    prompt: 'An ear listening carefully, paying attention, minimalist illustration, white background, clean style, no text',
-    emoji: '👂'
-  },
-  'смотреть': {
-    prompt: 'Eyes looking and watching carefully, paying attention, minimalist illustration, white background, clean style, no text',
-    emoji: '👀'
-  }
+    'хочу пить': { prompt: 'Стакан чистой питьевой воды на белом фоне, простая минималистичная иллюстрация, без текста', emoji: '💧' },
+    'хочу есть': { prompt: 'Тарелка с едой вилка и нож на белом фоне, простая минималистичная иллюстрация, без текста', emoji: '🍽️' },
+    'туалет': { prompt: 'Символ туалета на белом фоне, простая минималистичная иконка, без текста', emoji: '🚽' },
+    'играть': { prompt: 'Разноцветные детские кубики на белом фоне, простая иллюстрация, без текста', emoji: '🧩' },
+    'гулять': { prompt: 'Человек гуляет среди деревьев на свежем воздухе, простая иллюстрация, белый фон, без текста', emoji: '🚶' },
+    'спать': { prompt: 'Человек мирно спит в кровати, простая иллюстрация, белый фон, без текста', emoji: '😴' },
+    'помощь': { prompt: 'Поднятая рука просит о помощи, простая иллюстрация, белый фон, без текста', emoji: '🙋' },
+    'да': { prompt: 'Большая зелёная галочка знак согласия, простая иллюстрация, белый фон, без текста', emoji: '✅' },
+    'нет': { prompt: 'Большой красный крестик знак отказа, простая иллюстрация, белый фон, без текста', emoji: '❌' },
+    'больно': { prompt: 'Грустный человек показывает что ему больно, простая иллюстрация, белый фон, без текста', emoji: '🤕' },
+    'мама': { prompt: 'Добрая улыбающаяся мама, простая иллюстрация, белый фон, без текста', emoji: '👩' },
+    'папа': { prompt: 'Добрый улыбающийся папа, простая иллюстрация, белый фон, без текста', emoji: '👨' },
+    'музыка': { prompt: 'Наушники и музыкальные ноты, простая иллюстрация, белый фон, без текста', emoji: '🎵' },
+    'обнять': { prompt: 'Два человека обнимаются, простая тёплая иллюстрация, белый фон, без текста', emoji: '🤗' },
+    'устал': { prompt: 'Уставший зевающий человек, простая иллюстрация, белый фон, без текста', emoji: '😫' },
+    'стоп': { prompt: 'Жест стоп открытая ладонь, простая иллюстрация, белый фон, без текста', emoji: '✋' },
+    'школа': { prompt: 'Здание школы, простая иллюстрация, белый фон, без текста', emoji: '🏫' },
+    'дом': { prompt: 'Уютный домик с крышей и окнами, простая иллюстрация, белый фон, без текста', emoji: '🏠' },
+    'читать': { prompt: 'Открытая книга, простая иллюстрация, белый фон, без текста', emoji: '📖' },
+    'рисовать': { prompt: 'Цветные карандаши и бумага, простая иллюстрация, белый фон, без текста', emoji: '🖍️' },
+    'мыть руки': { prompt: 'Руки под краном с мылом и водой, простая иллюстрация, белый фон, без текста', emoji: '🧼' },
+    'чистить зубы': { prompt: 'Зубная щётка с пастой, простая иллюстрация, белый фон, без текста', emoji: '🪥' },
+    'одеваться': { prompt: 'Рубашка и штаны одежда, простая иллюстрация, белый фон, без текста', emoji: '👕' },
+    'друг': { prompt: 'Двое детей играют вместе улыбаются, простая иллюстрация, белый фон, без текста', emoji: '👫' },
+    'врач': { prompt: 'Добрый врач со стетоскопом, простая иллюстрация, белый фон, без текста', emoji: '👨‍⚕️' },
+    'купаться': { prompt: 'Ванна с пузырьками, простая иллюстрация, белый фон, без текста', emoji: '🛁' },
+    'ждать': { prompt: 'Часы и человек терпеливо ждёт, простая иллюстрация, белый фон, без текста', emoji: '⏰' },
+    'тихо': { prompt: 'Палец у губ жест тишины, простая иллюстрация, белый фон, без текста', emoji: '🤫' },
+    'слушать': { prompt: 'Ухо внимательно слушает, простая иллюстрация, белый фон, без текста', emoji: '👂' },
+    'смотреть': { prompt: 'Глаза внимательно смотрят, простая иллюстрация, белый фон, без текста', emoji: '👀' }
 };
 
-// ============================================
-// СТИЛИ ГЕНЕРАЦИИ
-// ============================================
 const styles = {
-  minimalist: {
-    name: 'Минималистичный',
-    suffix: ', minimalist illustration, simple shapes, flat design, clear outlines, white background, vector art style, no clutter',
-    negative: 'complex background, many details, realistic textures, shadows, text, watermark'
-  },
-  cartoon: {
-    name: 'Мультяшный',
-    suffix: ', friendly cartoon illustration, soft rounded shapes, warm colors, child-friendly, cute, Pixar style simplified, clean background',
-    negative: 'scary, dark, complex background, realistic, violent, text, watermark'
-  },
-  realistic: {
-    name: 'Реалистичный',
-    suffix: ', clear realistic photograph, well-lit, simple composition, centered, soft lighting, clean background, stock photo quality',
-    negative: 'blurry, dark, complex scene, text overlay, watermark, busy background'
-  },
-  schematic: {
-    name: 'Схематичный',
-    suffix: ', simple pictogram, icon style, black outline on white background, bold lines, high contrast, universal symbol',
-    negative: 'colorful, detailed, realistic, 3d, shadow, gradient, text, complex'
-  },
-  pastel: {
-    name: 'Пастельный',
-    suffix: ', soft pastel illustration, gentle colors, watercolor style, calming, muted tones, light background, peaceful',
-    negative: 'bright neon colors, harsh contrast, dark, scary, complex, text, watermark'
-  }
+    minimalist: { name: 'Минималистичный', suffix: ', минималистичная иллюстрация, простые формы, белый фон, без лишних деталей' },
+    cartoon: { name: 'Мультяшный', suffix: ', мультяшный стиль, яркие цвета, для детей, милый, дружелюбный' },
+    realistic: { name: 'Реалистичный', suffix: ', реалистичное изображение, хорошее освещение, чистый фон' },
+    schematic: { name: 'Схематичный', suffix: ', простая пиктограмма, чёрный контур на белом фоне, иконка' },
+    pastel: { name: 'Пастельный', suffix: ', пастельные мягкие цвета, акварельный стиль, нежный, спокойный' }
 };
 
-// ============================================
-// ЭМОЦИИ
-// ============================================
 const emotions = {
-  happy: {
-    name: 'Радость', emoji: '😊',
-    prompt: 'a face showing genuine happiness, bright smile, raised cheeks, sparkling eyes',
-    levels: {
-      low: 'slight smile, content, peaceful happiness',
-      medium: 'clear smile, happy eyes, visibly pleased',
-      high: 'big bright smile, laughing, very joyful, eyes crinkled with happiness'
-    }
-  },
-  sad: {
-    name: 'Грусть', emoji: '😢',
-    prompt: 'a face showing sadness, downturned mouth, droopy eyes',
-    levels: {
-      low: 'slightly downcast, pensive, mild disappointment',
-      medium: 'clearly sad, frowning, unhappy eyes',
-      high: 'very sad, tears in eyes, deeply upset, crying'
-    }
-  },
-  angry: {
-    name: 'Злость', emoji: '😠',
-    prompt: 'a face showing anger, furrowed brows, tight lips',
-    levels: {
-      low: 'slightly annoyed, mild frustration',
-      medium: 'clearly angry, furrowed eyebrows, frowning',
-      high: 'very angry, red face, clenched teeth, intense'
-    }
-  },
-  scared: {
-    name: 'Страх', emoji: '😨',
-    prompt: 'a face showing fear, wide eyes, open mouth, raised eyebrows',
-    levels: {
-      low: 'slightly worried, nervous, uneasy',
-      medium: 'clearly frightened, wide eyes, tense',
-      high: 'very scared, terrified, gasping, frozen with fear'
-    }
-  },
-  surprised: {
-    name: 'Удивление', emoji: '😲',
-    prompt: 'a face showing surprise, raised eyebrows, open mouth, wide eyes',
-    levels: {
-      low: 'slightly surprised, raised eyebrows, curious',
-      medium: 'clearly surprised, open mouth, wide eyes',
-      high: 'extremely surprised, shocked, jaw dropped'
-    }
-  },
-  calm: {
-    name: 'Спокойствие', emoji: '😌',
-    prompt: 'a face showing calmness, relaxed expression, gentle eyes, peaceful',
-    levels: {
-      low: 'neutral relaxed face, at ease',
-      medium: 'clearly calm, slight smile, serene',
-      high: 'deeply peaceful, meditative calm, pure serenity'
-    }
-  },
-  confused: {
-    name: 'Замешательство', emoji: '🤔',
-    prompt: 'a face showing confusion, tilted head, furrowed brow, uncertain look',
-    levels: {
-      low: 'slightly puzzled, thinking',
-      medium: 'clearly confused, scratching head',
-      high: 'very confused, lost, overwhelmed'
-    }
-  },
-  disgusted: {
-    name: 'Отвращение', emoji: '🤢',
-    prompt: 'a face showing disgust, wrinkled nose, upper lip raised',
-    levels: {
-      low: 'mildly displeased, slight nose wrinkle',
-      medium: 'clearly disgusted, wrinkled nose, frowning',
-      high: 'very disgusted, strong grimace, turned away'
-    }
-  }
+    happy: { name: 'Радость', emoji: '😊', levels: { low: 'лёгкая улыбка', medium: 'радостная улыбка счастливые глаза', high: 'широкая улыбка смех' } },
+    sad: { name: 'Грусть', emoji: '😢', levels: { low: 'немного грустный', medium: 'грустное лицо', high: 'очень грустный слёзы' } },
+    angry: { name: 'Злость', emoji: '😠', levels: { low: 'немного раздражён', medium: 'сердитое лицо', high: 'очень злой' } },
+    scared: { name: 'Страх', emoji: '😨', levels: { low: 'немного тревожный', medium: 'испуганное лицо', high: 'очень испуганный' } },
+    surprised: { name: 'Удивление', emoji: '😲', levels: { low: 'немного удивлён', medium: 'удивлённое лицо', high: 'очень удивлён шок' } },
+    calm: { name: 'Спокойствие', emoji: '😌', levels: { low: 'расслабленный', medium: 'спокойное умиротворённое лицо', high: 'глубокое спокойствие' } },
+    confused: { name: 'Замешательство', emoji: '🤔', levels: { low: 'немного озадачен', medium: 'растерянное лицо', high: 'полное замешательство' } },
+    disgusted: { name: 'Отвращение', emoji: '🤢', levels: { low: 'неприятно', medium: 'отвращение на лице', high: 'сильное отвращение' } }
 };
 
-// ============================================
-// УСПОКАИВАЮЩИЕ СЦЕНЫ
-// ============================================
 const calmingScenes = {
-  jellyfish: {
-    name: 'Медузы в океане', emoji: '🪼',
-    prompt: 'ethereal jellyfish floating gently in deep blue ocean, bioluminescent glow, slow graceful movement, serene underwater, soft light rays, peaceful, mesmerizing, calming'
-  },
-  rain: {
-    name: 'Дождь по стеклу', emoji: '🌧️',
-    prompt: 'raindrops on window glass, close-up, blurred city lights background, cozy rainy day, water droplets sliding down, warm indoor atmosphere, relaxing'
-  },
-  aurora: {
-    name: 'Северное сияние', emoji: '🌌',
-    prompt: 'beautiful aurora borealis over calm lake, green and purple lights, stars visible, mirror reflection in still water, serene Nordic landscape, magical'
-  },
-  clouds: {
-    name: 'Плывущие облака', emoji: '☁️',
-    prompt: 'fluffy white clouds drifting across bright blue sky, peaceful sunny day, cotton-like cumulus clouds, infinite sky, serene and calming'
-  },
-  fireplace: {
-    name: 'Камин', emoji: '🔥',
-    prompt: 'cozy fireplace with gentle flames, warm orange glow, comfortable living room, soft warm lighting, hygge atmosphere, relaxing evening'
-  },
-  waves: {
-    name: 'Морские волны', emoji: '🌊',
-    prompt: 'gentle ocean waves on sandy beach, soft sunset colors, peaceful seashore, foam on sand, rhythmic waves, golden hour light, calming'
-  },
-  snowfall: {
-    name: 'Снегопад', emoji: '❄️',
-    prompt: 'gentle snowfall at night, soft snowflakes falling slowly, warm street lights, quiet winter scene, peaceful snowy evening, magical'
-  },
-  garden: {
-    name: 'Сад с бабочками', emoji: '🦋',
-    prompt: 'peaceful garden with colorful butterflies, soft sunlight, blooming flowers, gentle breeze, lavender and daisies, calming and beautiful'
-  },
-  underwater: {
-    name: 'Подводный мир', emoji: '🐠',
-    prompt: 'calm underwater coral reef, gentle fish swimming slowly, sunlight filtering through water, colorful but muted corals, peaceful ocean, bubbles'
-  },
-  lava_lamp: {
-    name: 'Лава-лампа', emoji: '🫧',
-    prompt: 'colorful lava lamp with smooth blobs floating, warm purple and blue colors, hypnotic movement, soft glow, mesmerizing shapes, retro ambient'
-  }
+    jellyfish: { name: 'Медузы', emoji: '🪼', prompt: 'Светящиеся медузы плавают в глубоком тёмно-синем океане, мягкий свет, спокойная подводная сцена' },
+    rain: { name: 'Дождь', emoji: '🌧️', prompt: 'Капли дождя стекают по оконному стеклу, за окном размытые огни города, уютная атмосфера' },
+    aurora: { name: 'Сияние', emoji: '🌌', prompt: 'Северное сияние над спокойным озером, зелёные и фиолетовые переливы, звёздное небо' },
+    clouds: { name: 'Облака', emoji: '☁️', prompt: 'Пушистые белые облака на ярко-голубом небе, солнечный мирный день' },
+    fireplace: { name: 'Камин', emoji: '🔥', prompt: 'Уютный камин с мягким пламенем, тёплый свет, уютная комната' },
+    waves: { name: 'Волны', emoji: '🌊', prompt: 'Спокойные морские волны на песчаном пляже, нежный закат, умиротворение' },
+    snowfall: { name: 'Снегопад', emoji: '❄️', prompt: 'Тихий снегопад ночью, мягкие снежинки, тёплый свет фонарей, волшебная зимняя атмосфера' },
+    garden: { name: 'Сад', emoji: '🦋', prompt: 'Красивый сад с бабочками, мягкий солнечный свет, цветущие цветы, покой и тишина' }
+};
+
+const palettes = {
+    muted: ', приглушённые спокойные цвета',
+    pastel: ', нежные пастельные цвета',
+    warm: ', тёплые мягкие цвета',
+    cool: ', холодные успокаивающие цвета'
 };
 
 // ============================================
-// API МАРШРУТЫ
+// API
 // ============================================
-
-// Получить все PECS-шаблоны
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', aiEnabled: !!AUTH_KEY, provider: 'GigaChat + Kandinsky', version: '6.0' });
+});
 app.get('/api/templates', (req, res) => {
-  const templates = Object.entries(pecsTemplates).map(([text, data]) => ({
-    text: text,
-    emoji: data.emoji,
-    prompt: data.prompt
-  }));
-  res.json(templates);
+    res.json(Object.entries(pecsTemplates).map(([t, d]) => ({ text: t, emoji: d.emoji })));
 });
-
-// Получить стили
 app.get('/api/styles', (req, res) => {
-  const styleList = Object.entries(styles).map(([id, data]) => ({
-    id: id,
-    name: data.name
-  }));
-  res.json(styleList);
+    res.json(Object.entries(styles).map(([id, d]) => ({ id, name: d.name })));
 });
-
-// Получить эмоции
 app.get('/api/emotions', (req, res) => {
-  const emotionList = Object.entries(emotions).map(([id, data]) => ({
-    id: id,
-    name: data.name,
-    emoji: data.emoji
-  }));
-  res.json(emotionList);
+    res.json(Object.entries(emotions).map(([id, d]) => ({ id, name: d.name, emoji: d.emoji })));
 });
-
-// Получить сцены
 app.get('/api/calming-scenes', (req, res) => {
-  const sceneList = Object.entries(calmingScenes).map(([id, data]) => ({
-    id: id,
-    name: data.name,
-    emoji: data.emoji
-  }));
-  res.json(sceneList);
+    res.json(Object.entries(calmingScenes).map(([id, d]) => ({ id, name: d.name, emoji: d.emoji })));
 });
 
-// Генерация промптов для PECS-карточек
-app.post('/api/generate/pecs', (req, res) => {
-  const { items, style: styleName } = req.body;
+// ---- PECS ----
+app.post('/api/generate/pecs', async (req, res) => {
+    const { items, style: sn, withImages } = req.body;
+    if (!items || !items.length) return res.status(400).json({ error: 'Укажите карточки' });
 
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    return res.status(400).json({ error: 'Укажите хотя бы одну карточку' });
-  }
+    const sel = styles[sn] || styles.minimalist;
+    const cards = [];
 
-  if (items.length > 20) {
-    return res.status(400).json({ error: 'Максимум 20 карточек за раз' });
-  }
+    for (let i = 0; i < Math.min(items.length, 10); i++) {
+        const item = items[i].trim();
+        const tpl = pecsTemplates[item.toLowerCase()];
+        const prompt = tpl ? tpl.prompt + sel.suffix : item + sel.suffix + ', понятная карточка для общения, без текста';
 
-  const selectedStyle = styles[styleName] || styles.minimalist;
-  const safetyNeg = 'nsfw, violent, blood, scary, horror, disturbing, nude, sexual, weapon';
+        const card = { text: item, emoji: tpl ? tpl.emoji : '🖼️', prompt, imageUrl: null, imageError: null };
 
-  const cards = items.map(item => {
-    const text = item.trim().toLowerCase();
-    const template = pecsTemplates[text];
-
-    let prompt;
-    if (template) {
-      prompt = template.prompt + selectedStyle.suffix;
-    } else {
-      prompt = `Clear visual representation of "${item}"${selectedStyle.suffix}, single concept, easy to understand, communication card`;
+        if (withImages) {
+            console.log('[PECS] (' + (i + 1) + '/' + Math.min(items.length, 10) + ') ' + item);
+            const r = await generateImage(prompt);
+            if (r.success) card.imageUrl = r.imageUrl;
+            else card.imageError = r.error;
+        }
+        cards.push(card);
     }
 
-    return {
-      text: item.trim(),
-      emoji: template ? template.emoji : '🖼️',
-      prompt: prompt,
-      negative_prompt: selectedStyle.negative + ', ' + safetyNeg,
-      style: selectedStyle.name
-    };
-  });
-
-  res.json({
-    success: true,
-    count: cards.length,
-    style: selectedStyle.name,
-    cards: cards
-  });
+    res.json({ success: true, cards, aiEnabled: !!AUTH_KEY });
 });
 
-// Генерация промпта для эмоции
-app.post('/api/generate/emotion', (req, res) => {
-  const { emotion: emotionId, intensity, style: styleName } = req.body;
+// ---- ЭМОЦИИ ----
+app.post('/api/generate/emotion', async (req, res) => {
+    const { emotion: eid, intensity, style: sn, withImage } = req.body;
+    const ed = emotions[eid];
+    if (!ed) return res.status(400).json({ error: 'Неизвестная эмоция' });
 
-  const emotionData = emotions[emotionId];
-  if (!emotionData) {
-    return res.status(400).json({ error: 'Неизвестная эмоция' });
-  }
+    const lv = intensity || 'medium';
+    const sel = styles[sn] || styles.cartoon;
+    const prompt = 'Портрет человека выражающего эмоцию ' + ed.name + ', ' + (ed.levels[lv] || ed.levels.medium) + ', чёткое выражение лица, вид спереди' + sel.suffix;
 
-  const level = intensity || 'medium';
-  const selectedStyle = styles[styleName] || styles.cartoon;
-  const levelPrompt = emotionData.levels[level] || emotionData.levels.medium;
+    const result = { success: true, emotion: ed.name, emoji: ed.emoji, intensity: lv, style: sel.name, prompt, imageUrl: null, imageError: null, aiEnabled: !!AUTH_KEY };
 
-  const prompt = `Portrait of a person showing ${emotionData.name} emotion, ${emotionData.prompt}, ${levelPrompt}, clear facial expression, front view${selectedStyle.suffix}`;
-  const negative = selectedStyle.negative + ', nsfw, violent, scary, disturbing';
+    if (withImage) {
+        const r = await generateImage(prompt);
+        if (r.success) result.imageUrl = r.imageUrl;
+        else result.imageError = r.error;
+    }
 
-  res.json({
-    success: true,
-    emotion: emotionData.name,
-    emoji: emotionData.emoji,
-    intensity: level,
-    prompt: prompt,
-    negative_prompt: negative,
-    style: selectedStyle.name
-  });
+    res.json(result);
 });
 
-// Генерация промпта для успокаивающей сцены
-app.post('/api/generate/calming', (req, res) => {
-  const { scene: sceneId, customDescription, colorPalette } = req.body;
+// ---- ИСТОРИИ ----
+app.post('/api/generate/story', async (req, res) => {
+    const { title, steps, style: sn, withImages } = req.body;
+    if (!steps || !steps.length) return res.status(400).json({ error: 'Добавьте шаги' });
 
-  let prompt;
-  let name;
-  let emoji;
+    const sel = styles[sn] || styles.cartoon;
+    const result = [];
 
-  if (sceneId && calmingScenes[sceneId]) {
-    const sceneData = calmingScenes[sceneId];
-    prompt = sceneData.prompt;
-    name = sceneData.name;
-    emoji = sceneData.emoji;
-  } else if (customDescription) {
-    prompt = `${customDescription}, calming, peaceful, soothing, gentle colors, relaxing atmosphere`;
-    name = 'Своя сцена';
-    emoji = '🎨';
-  } else {
-    return res.status(400).json({ error: 'Выберите сцену или опишите свою' });
-  }
+    for (let i = 0; i < steps.length; i++) {
+        const t = steps[i].trim();
+        if (!t) continue;
+        const prompt = 'Иллюстрация к истории: ' + t + ', понятная сцена' + sel.suffix;
+        const step = { step: i + 1, text: t, prompt, imageUrl: null, imageError: null };
 
-  const palettes = {
-    muted: ', muted desaturated colors, low saturation, calm palette',
-    pastel: ', pastel colors, soft pink, light blue, gentle yellow, mint green',
-    warm: ', warm gentle colors, soft orange, cream, light brown',
-    cool: ', cool calming colors, light blue, soft teal, lavender'
-  };
+        if (withImages) {
+            console.log('[STORY] (' + (i + 1) + '/' + steps.length + ') ' + t);
+            const r = await generateImage(prompt);
+            if (r.success) step.imageUrl = r.imageUrl;
+            else step.imageError = r.error;
+        }
+        result.push(step);
+    }
 
-  prompt += palettes[colorPalette] || palettes.muted;
-
-  res.json({
-    success: true,
-    scene: name,
-    emoji: emoji,
-    prompt: prompt,
-    negative_prompt: 'fast movement, jarring, sudden changes, flashing, strobing, chaotic, scary, violent, nsfw, text, watermark'
-  });
+    res.json({ success: true, title: title || 'История', steps: result, aiEnabled: !!AUTH_KEY });
 });
 
-// Генерация промптов для социальной истории
-app.post('/api/generate/story', (req, res) => {
-  const { title, steps, style: styleName } = req.body;
+// ---- УСПОКОЕНИЕ ----
+app.post('/api/generate/calming', async (req, res) => {
+    const { scene, customDescription, colorPalette, withImage } = req.body;
+    let prompt, name, emoji;
 
-  if (!steps || !Array.isArray(steps) || steps.length === 0) {
-    return res.status(400).json({ error: 'Добавьте хотя бы один шаг истории' });
-  }
+    if (scene && calmingScenes[scene]) { const s = calmingScenes[scene]; prompt = s.prompt; name = s.name; emoji = s.emoji; }
+    else if (customDescription) { prompt = customDescription + ', спокойный, умиротворяющий'; name = 'Своя сцена'; emoji = '🎨'; }
+    else return res.status(400).json({ error: 'Выберите сцену' });
 
-  const selectedStyle = styles[styleName] || styles.cartoon;
-  const safetyNeg = 'nsfw, violent, blood, scary, horror, disturbing, nude, sexual';
+    prompt += palettes[colorPalette] || palettes.muted;
 
-  const storySteps = steps.map((step, index) => ({
-    step: index + 1,
-    text: step.trim(),
-    prompt: `Illustration for social story step ${index + 1}: "${step.trim()}", clear scene, easy to understand, showing social situation${selectedStyle.suffix}, sequential illustration, consistent style`,
-    negative_prompt: selectedStyle.negative + ', ' + safetyNeg
-  }));
+    const result = { success: true, scene: name, emoji, prompt, imageUrl: null, imageError: null, aiEnabled: !!AUTH_KEY };
 
-  res.json({
-    success: true,
-    title: title || 'Моя история',
-    totalSteps: storySteps.length,
-    style: selectedStyle.name,
-    steps: storySteps
-  });
+    if (withImage) {
+        const r = await generateImage(prompt);
+        if (r.success) result.imageUrl = r.imageUrl;
+        else result.imageError = r.error;
+    }
+
+    res.json(result);
 });
 
 // ============================================
-// ЗАПУСК СЕРВЕРА
-// ============================================
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log('');
-  console.log('╔══════════════════════════════════════╗');
-  console.log('║   🧩 NeuroVisual Helper запущен!     ║');
-  console.log('║                                      ║');
-  console.log('║   Откройте в браузере:               ║');
-  console.log(`║   http://localhost:${PORT}               ║`);
-  console.log('║                                      ║');
-  console.log('║   Для остановки: Ctrl + C            ║');
-  console.log('╚══════════════════════════════════════╝');
-  console.log('');
+    console.log('');
+    console.log('╔══════════════════════════════════════════════════╗');
+    console.log('║   🧩 NeuroVisual Helper v6.0                     ║');
+    console.log('║   🌐 http://localhost:' + PORT + '                      ║');
+    if (AUTH_KEY) {
+        console.log('║   🎨 GigaChat + Kandinsky: ✅ Подключён!        ║');
+    } else {
+        console.log('║   🎨 GigaChat: ❌ Нет ключа                    ║');
+        console.log('║   Добавьте GIGACHAT_AUTH_KEY в .env             ║');
+    }
+    console.log('║   Ctrl+C для остановки                           ║');
+    console.log('╚══════════════════════════════════════════════════╝');
+    console.log('');
 });

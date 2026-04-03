@@ -1,185 +1,114 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🧩 NeuroVisual Helper</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f0f4f8; color: #2d3748; min-height: 100vh;
-        }
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white; padding: 24px 20px; text-align: center;
-        }
-        .header h1 { font-size: 26px; margin-bottom: 4px; }
-        .header p { opacity: 0.9; font-size: 15px; }
-        .tabs {
-            display: flex; justify-content: center; gap: 6px; padding: 14px 10px;
-            background: white; box-shadow: 0 2px 5px rgba(0,0,0,0.06); flex-wrap: wrap;
-        }
-        .tab {
-            padding: 10px 16px; border: 2px solid #e2e8f0; border-radius: 25px;
-            background: white; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s;
-        }
-        .tab:hover { border-color: #667eea; color: #667eea; }
-        .tab.active { background: #667eea; color: white; border-color: #667eea; }
-        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
-        .section {
-            display: none; background: white; border-radius: 16px; padding: 28px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.07); margin-top: 10px;
-        }
-        .section.active { display: block; }
-        .section h2 { font-size: 21px; margin-bottom: 6px; }
-        .section .desc { color: #718096; margin-bottom: 20px; font-size: 14px; line-height: 1.5; }
-        label { display: block; font-weight: 600; margin-bottom: 6px; color: #4a5568; font-size: 14px; margin-top: 15px; }
-        label:first-child { margin-top: 0; }
-        textarea, input[type="text"] {
-            width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px;
-            font-size: 15px; font-family: inherit; transition: border-color 0.2s; resize: vertical;
-        }
-        textarea:focus, input[type="text"]:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.12); }
-        textarea { min-height: 80px; }
-        .style-options { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
-        .style-btn {
-            padding: 9px 15px; border: 2px solid #e2e8f0; border-radius: 10px;
-            background: white; cursor: pointer; font-size: 13px; transition: all 0.2s;
-        }
-        .style-btn:hover { border-color: #667eea; }
-        .style-btn.selected { border-color: #667eea; background: #ebf0ff; color: #667eea; font-weight: 600; }
-        .quick-btns { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
-        .quick-btn {
-            padding: 7px 13px; background: #f7fafc; border: 1px solid #e2e8f0;
-            border-radius: 20px; cursor: pointer; font-size: 13px; transition: all 0.2s;
-        }
-        .quick-btn:hover { background: #ebf0ff; border-color: #667eea; }
-        .gen-btn {
-            width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white; border: none; border-radius: 12px; font-size: 17px;
-            font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 18px;
-        }
-        .gen-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102,126,234,0.4); }
-        .gen-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
-        .cards-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 15px; margin-top: 20px;
-        }
-        .card {
-            background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 12px;
-            padding: 15px; text-align: center; transition: all 0.2s;
-        }
-        .card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        .card-icon {
-            width: 100%; aspect-ratio: 1; background: linear-gradient(135deg, #e0e7ff, #f0e6ff);
-            border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 56px; margin-bottom: 10px;
-        }
-        .card-label { font-weight: 600; font-size: 16px; color: #2d3748; text-transform: capitalize; }
-        .prompt-box { background: #f7fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; margin-top: 10px; }
-        .prompt-box summary { cursor: pointer; font-size: 13px; color: #667eea; font-weight: 600; }
-        .prompt-text {
-            font-family: 'Courier New', monospace; font-size: 12px; color: #4a5568;
-            background: white; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;
-            word-break: break-word; line-height: 1.5; margin-top: 8px;
-        }
-        .neg-prompt-text {
-            font-family: 'Courier New', monospace; font-size: 11px; color: #a0aec0;
-            background: #fff5f5; padding: 8px; border-radius: 6px; border: 1px solid #fed7d7;
-            word-break: break-word; line-height: 1.4; margin-top: 6px;
-        }
-        .copy-btn {
-            margin-top: 6px; padding: 7px 14px; background: #667eea; color: white;
-            border: none; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s;
-        }
-        .copy-btn:hover { background: #5a67d8; }
-        .copy-btn.copied { background: #48bb78; }
-        .grid-select { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 12px 0; }
-        .grid-item {
-            padding: 18px 12px; text-align: center; border: 2px solid #e2e8f0;
-            border-radius: 12px; cursor: pointer; transition: all 0.2s; background: white;
-        }
-        .grid-item:hover { border-color: #667eea; transform: translateY(-2px); }
-        .grid-item.selected { border-color: #667eea; background: #ebf0ff; }
-        .grid-item-emoji { font-size: 36px; margin-bottom: 6px; }
-        .grid-item-name { font-weight: 600; font-size: 13px; }
-        .slider-wrap { margin: 15px 0; }
-        .slider-wrap input[type="range"] {
-            width: 100%; height: 8px; -webkit-appearance: none;
-            background: linear-gradient(to right, #e2e8f0, #667eea, #764ba2);
-            border-radius: 4px; outline: none;
-        }
-        .slider-wrap input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 22px; height: 22px; background: white;
-            border: 3px solid #667eea; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-        }
-        .slider-labels { display: flex; justify-content: space-between; font-size: 12px; color: #718096; margin-top: 4px; }
-        .story-step {
-            display: flex; gap: 12px; align-items: center; padding: 12px;
-            background: #f7fafc; border-radius: 10px; margin-bottom: 8px; border: 1px solid #e2e8f0;
-        }
-        .step-num {
-            width: 32px; height: 32px; background: #667eea; color: white; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0;
-        }
-        .step-input { flex: 1; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: inherit; }
-        .step-input:focus { outline: none; border-color: #667eea; }
-        .step-remove { background: none; border: none; font-size: 20px; cursor: pointer; color: #a0aec0; padding: 5px; }
-        .step-remove:hover { color: #e53e3e; }
-        .add-step-btn {
-            width: 100%; padding: 12px; border: 2px dashed #cbd5e0; border-radius: 10px;
-            background: none; cursor: pointer; font-size: 14px; color: #718096; transition: all 0.2s; margin-top: 5px;
-        }
-        .add-step-btn:hover { border-color: #667eea; color: #667eea; }
-        .result-area { margin-top: 20px; }
-        .result-area h3 { margin-bottom: 12px; font-size: 18px; }
-        .notice { padding: 14px; border-radius: 10px; font-size: 13px; line-height: 1.5; margin-top: 15px; }
-        .notice a { color: #667eea; font-weight: 600; text-decoration: none; }
-        .notice a:hover { text-decoration: underline; }
-        .notice.info { background: #ebf8ff; border: 1px solid #bee3f8; color: #2b6cb0; }
-        .notice.warn { background: #fffbeb; border: 1px solid #fef3c7; color: #92400e; }
-        .notice.success { background: #f0fff4; border: 1px solid #c6f6d5; color: #276749; }
-        .how-to {
-            background: #fffbeb; border: 1px solid #fef3c7; border-radius: 10px;
-            padding: 15px; margin: 15px 0; font-size: 13px; line-height: 1.6;
-        }
-        .how-to h4 { color: #92400e; margin-bottom: 8px; }
-        .how-to ol { padding-left: 20px; }
-        .how-to a { color: #667eea; font-weight: 600; text-decoration: none; }
-        .loading { text-align: center; padding: 20px; display: none; }
-        .loading.show { display: block; }
-        .spinner {
-            display: inline-block; width: 36px; height: 36px; border: 4px solid #e2e8f0;
-            border-top-color: #667eea; border-radius: 50%; animation: spin 0.7s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .footer { text-align: center; padding: 30px 20px; color: #a0aec0; font-size: 12px; line-height: 1.6; }
-        .single-result {
-            background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 12px;
-            padding: 20px; margin-top: 15px;
-        }
-        .single-result .result-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-        .single-result .result-emoji { font-size: 40px; }
-        .single-result .result-title { font-size: 18px; font-weight: 600; }
-        .single-result .result-subtitle { font-size: 13px; color: #718096; }
-        @media (max-width: 768px) {
-            .header h1 { font-size: 21px; }
-            .container { padding: 12px; }
-            .section { padding: 18px; }
-            .cards-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .grid-select { grid-template-columns: repeat(2, 1fr); }
-            .tab { padding: 8px 11px; font-size: 12px; }
-        }
-        @media (max-width: 480px) {
-            .cards-grid { grid-template-columns: 1fr; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧩 NeuroVisual Helper</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f4f8;color:#2d3748;min-height:100vh}
+.header{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;padding:24px 20px;text-align:center}
+.header h1{font-size:26px;margin-bottom:4px}
+.header p{opacity:.9;font-size:15px}
+.ai-badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;margin-top:8px}
+.ai-badge.on{background:rgba(72,187,120,.3);color:#c6f6d5}
+.ai-badge.off{background:rgba(245,101,101,.3);color:#fed7d7}
+.tabs{display:flex;justify-content:center;gap:6px;padding:14px 10px;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.06);flex-wrap:wrap}
+.tab{padding:10px 16px;border:2px solid #e2e8f0;border-radius:25px;background:#fff;cursor:pointer;font-size:14px;font-weight:500;transition:all .2s}
+.tab:hover{border-color:#667eea;color:#667eea}
+.tab.active{background:#667eea;color:#fff;border-color:#667eea}
+.container{max-width:900px;margin:0 auto;padding:20px}
+.section{display:none;background:#fff;border-radius:16px;padding:28px;box-shadow:0 4px 15px rgba(0,0,0,.07);margin-top:10px}
+.section.active{display:block}
+.section h2{font-size:21px;margin-bottom:6px}
+.section .desc{color:#718096;margin-bottom:20px;font-size:14px;line-height:1.5}
+label{display:block;font-weight:600;margin:15px 0 6px;color:#4a5568;font-size:14px}
+label:first-child{margin-top:0}
+textarea,input[type="text"]{width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:10px;font-size:15px;font-family:inherit;transition:border-color .2s;resize:vertical}
+textarea:focus,input[type="text"]:focus{outline:none;border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,.12)}
+textarea{min-height:80px}
+.style-options{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.style-btn{padding:9px 15px;border:2px solid #e2e8f0;border-radius:10px;background:#fff;cursor:pointer;font-size:13px;transition:all .2s}
+.style-btn:hover{border-color:#667eea}
+.style-btn.selected{border-color:#667eea;background:#ebf0ff;color:#667eea;font-weight:600}
+.quick-btns{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+.quick-btn{padding:7px 13px;background:#f7fafc;border:1px solid #e2e8f0;border-radius:20px;cursor:pointer;font-size:13px;transition:all .2s}
+.quick-btn:hover{background:#ebf0ff;border-color:#667eea}
+.btn-row{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+.gen-btn{flex:1;min-width:200px;padding:15px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;transition:all .2s}
+.gen-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(102,126,234,.4)}
+.gen-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+.gen-btn.secondary{background:linear-gradient(135deg,#48bb78,#38a169)}
+.gen-btn.secondary:hover{box-shadow:0 6px 20px rgba(72,187,120,.4)}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:15px;margin-top:20px}
+.card{background:#f7fafc;border:2px solid #e2e8f0;border-radius:12px;padding:15px;text-align:center;transition:all .2s}
+.card:hover{transform:translateY(-3px);box-shadow:0 5px 15px rgba(0,0,0,.1)}
+.card-icon{width:100%;aspect-ratio:1;background:linear-gradient(135deg,#e0e7ff,#f0e6ff);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:56px;margin-bottom:10px;overflow:hidden;position:relative}
+.card-icon img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.card-label{font-weight:600;font-size:16px;color:#2d3748;text-transform:capitalize}
+.prompt-box{background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-top:10px;text-align:left}
+.prompt-box summary{cursor:pointer;font-size:13px;color:#667eea;font-weight:600}
+.prompt-text{font-family:'Courier New',monospace;font-size:12px;color:#4a5568;background:#fff;padding:10px;border-radius:8px;border:1px solid #e2e8f0;word-break:break-word;line-height:1.5;margin-top:8px}
+.neg-prompt-text{font-family:'Courier New',monospace;font-size:11px;color:#a0aec0;background:#fff5f5;padding:8px;border-radius:6px;border:1px solid #fed7d7;word-break:break-word;line-height:1.4;margin-top:6px}
+.copy-btn{margin-top:6px;padding:7px 14px;background:#667eea;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;transition:all .2s;margin-right:4px}
+.copy-btn:hover{background:#5a67d8}
+.copy-btn.copied{background:#48bb78}
+.dl-btn{margin-top:6px;padding:7px 14px;background:#48bb78;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;text-decoration:none;display:inline-block}
+.dl-btn:hover{background:#38a169}
+.grid-select{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:12px 0}
+.grid-item{padding:18px 12px;text-align:center;border:2px solid #e2e8f0;border-radius:12px;cursor:pointer;transition:all .2s;background:#fff}
+.grid-item:hover{border-color:#667eea;transform:translateY(-2px)}
+.grid-item.selected{border-color:#667eea;background:#ebf0ff}
+.grid-item-emoji{font-size:36px;margin-bottom:6px}
+.grid-item-name{font-weight:600;font-size:13px}
+.slider-wrap{margin:15px 0}
+.slider-wrap input[type="range"]{width:100%;height:8px;-webkit-appearance:none;background:linear-gradient(to right,#e2e8f0,#667eea,#764ba2);border-radius:4px;outline:none}
+.slider-wrap input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;background:#fff;border:3px solid #667eea;border-radius:50%;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.slider-labels{display:flex;justify-content:space-between;font-size:12px;color:#718096;margin-top:4px}
+.story-step{display:flex;gap:12px;align-items:center;padding:12px;background:#f7fafc;border-radius:10px;margin-bottom:8px;border:1px solid #e2e8f0}
+.step-num{width:32px;height:32px;background:#667eea;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0}
+.step-input{flex:1;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:inherit}
+.step-input:focus{outline:none;border-color:#667eea}
+.step-remove{background:none;border:none;font-size:20px;cursor:pointer;color:#a0aec0;padding:5px}
+.step-remove:hover{color:#e53e3e}
+.add-step-btn{width:100%;padding:12px;border:2px dashed #cbd5e0;border-radius:10px;background:none;cursor:pointer;font-size:14px;color:#718096;transition:all .2s;margin-top:5px}
+.add-step-btn:hover{border-color:#667eea;color:#667eea}
+.result-area{margin-top:20px}
+.result-area h3{margin-bottom:12px;font-size:18px}
+.single-result{background:#f7fafc;border:2px solid #e2e8f0;border-radius:12px;padding:20px;margin-top:15px}
+.result-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.result-emoji{font-size:40px}
+.result-title{font-size:18px;font-weight:600}
+.result-subtitle{font-size:13px;color:#718096}
+.result-image{width:100%;max-width:400px;border-radius:12px;margin:15px auto;display:block;box-shadow:0 4px 15px rgba(0,0,0,.1)}
+.notice{padding:14px;border-radius:10px;font-size:13px;line-height:1.5;margin-top:15px}
+.notice a{color:#667eea;font-weight:600;text-decoration:none}
+.notice a:hover{text-decoration:underline}
+.notice.info{background:#ebf8ff;border:1px solid #bee3f8;color:#2b6cb0}
+.notice.warn{background:#fffbeb;border:1px solid #fef3c7;color:#92400e}
+.notice.success{background:#f0fff4;border:1px solid #c6f6d5;color:#276749}
+.notice.error{background:#fff5f5;border:1px solid #fed7d7;color:#c53030}
+.how-to{background:#fffbeb;border:1px solid #fef3c7;border-radius:10px;padding:15px;margin:15px 0;font-size:13px;line-height:1.6}
+.how-to h4{color:#92400e;margin-bottom:8px}
+.how-to ol{padding-left:20px}
+.how-to a{color:#667eea;font-weight:600;text-decoration:none}
+.loading{text-align:center;padding:20px;display:none}
+.loading.show{display:block}
+.spinner{display:inline-block;width:36px;height:36px;border:4px solid #e2e8f0;border-top-color:#667eea;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress-bar{width:100%;height:6px;background:#e2e8f0;border-radius:3px;margin-top:10px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#667eea,#764ba2);border-radius:3px;transition:width .3s;width:0}
+.footer{text-align:center;padding:30px 20px;color:#a0aec0;font-size:12px;line-height:1.6}
+@media(max-width:768px){.header h1{font-size:21px}.container{padding:12px}.section{padding:18px}.cards-grid{grid-template-columns:repeat(2,1fr);gap:10px}.grid-select{grid-template-columns:repeat(2,1fr)}.tab{padding:8px 11px;font-size:12px}.btn-row{flex-direction:column}}
+@media(max-width:480px){.cards-grid{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
 
 <div class="header">
     <h1>🧩 NeuroVisual Helper</h1>
     <p>Генерируй понятные картинки для общения и поддержки</p>
+    <div class="ai-badge off" id="ai-status">⏳ Проверка AI...</div>
 </div>
 
 <div class="tabs">
@@ -191,796 +120,473 @@
 
 <div class="container">
 
-<!-- ====== PECS ====== -->
+<!-- PECS -->
 <div class="section active" id="section-pecs">
     <h2>🃏 Генератор PECS-карточек</h2>
-    <p class="desc">Введите слова для карточек — система создаст готовые промпты для генерации картинок.</p>
-
+    <p class="desc">Введите слова для карточек. С включённым AI — картинки генерируются автоматически!</p>
     <label>Введите слова (каждое с новой строки или через запятую):</label>
-    <textarea id="pecs-input" placeholder="хочу пить&#10;хочу есть&#10;туалет&#10;играть&#10;гулять"></textarea>
-
+    <textarea id="pecs-input" placeholder="хочу пить&#10;хочу есть&#10;туалет&#10;играть"></textarea>
     <label>Или выберите готовые:</label>
     <div class="quick-btns" id="pecs-quick-btns"></div>
-
-    <label>Стиль изображения:</label>
+    <label>Стиль:</label>
     <div class="style-options" id="pecs-styles"></div>
-
-    <button class="gen-btn" onclick="generatePECS()">✨ Сгенерировать карточки</button>
-    <div class="loading" id="pecs-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096">Создаём промпты...</p></div>
+    <div class="btn-row">
+        <button class="gen-btn" onclick="generatePECS(false)">📝 Только промпты</button>
+        <button class="gen-btn secondary" id="pecs-ai-btn" onclick="generatePECS(true)" disabled>🤖 Сгенерировать с картинками</button>
+    </div>
+    <div class="loading" id="pecs-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096" id="pecs-loading-text">Создаём...</p><div class="progress-bar"><div class="progress-fill" id="pecs-progress"></div></div></div>
     <div class="result-area" id="pecs-results"></div>
-
     <div class="how-to">
-        <h4>📋 Как использовать промпты?</h4>
+        <h4>📋 Два способа использования</h4>
         <ol>
-            <li>Нажмите «Сгенерировать карточки» выше</li>
-            <li>Под каждой карточкой нажмите «📋 Копировать промпт»</li>
-            <li>Откройте любой ИИ-генератор картинок:
-                <a href="https://ideogram.ai" target="_blank">Ideogram</a>,
-                <a href="https://www.bing.com/images/create" target="_blank">Bing Creator</a>,
-                <a href="https://leonardo.ai" target="_blank">Leonardo</a>,
-                <a href="https://playground.com" target="_blank">Playground</a>
-            </li>
-            <li>Вставьте промпт (Ctrl+V) и нажмите «Generate»</li>
-            <li>Скачайте картинку и распечатайте!</li>
+            <li><b>С AI (зелёная кнопка):</b> Картинки генерируются прямо здесь автоматически!</li>
+            <li><b>Только промпты (фиолетовая кнопка):</b> Скопируйте промпт → вставьте в <a href="https://ideogram.ai" target="_blank">Ideogram</a> или <a href="https://www.bing.com/images/create" target="_blank">Bing Creator</a></li>
         </ol>
     </div>
 </div>
 
-<!-- ====== ЭМОЦИИ ====== -->
+<!-- ЭМОЦИИ -->
 <div class="section" id="section-emotions">
     <h2>😊 Тренажёр эмоций</h2>
-    <p class="desc">Выберите эмоцию и интенсивность — получите промпт для генерации лица с нужным выражением.</p>
-
+    <p class="desc">Выберите эмоцию и интенсивность — получите картинку лица с нужным выражением.</p>
     <label>Выберите эмоцию:</label>
     <div class="grid-select" id="emotions-grid"></div>
-
     <label>Интенсивность:</label>
     <div class="slider-wrap">
         <input type="range" id="intensity-slider" min="1" max="3" value="2">
         <div class="slider-labels"><span>😶 Слабая</span><span>🙂 Средняя</span><span>😄 Сильная</span></div>
     </div>
-
     <label>Стиль:</label>
     <div class="style-options" id="emotion-styles"></div>
-
-    <button class="gen-btn" onclick="generateEmotion()">✨ Создать промпт эмоции</button>
-    <div class="loading" id="emotion-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096">Создаём промпт...</p></div>
+    <div class="btn-row">
+        <button class="gen-btn" onclick="generateEmotion(false)">📝 Только промпт</button>
+        <button class="gen-btn secondary" id="emotion-ai-btn" onclick="generateEmotion(true)" disabled>🤖 Сгенерировать картинку</button>
+    </div>
+    <div class="loading" id="emotion-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096">Генерация эмоции...</p></div>
     <div class="result-area" id="emotion-results"></div>
 </div>
 
-<!-- ====== ИСТОРИИ ====== -->
+<!-- ИСТОРИИ -->
 <div class="section" id="section-stories">
     <h2>📖 Социальные истории</h2>
-    <p class="desc">Создайте последовательность событий — для каждого шага будет свой промпт.</p>
-
-    <label>Название истории:</label>
+    <p class="desc">Создайте последовательность событий с иллюстрациями.</p>
+    <label>Название:</label>
     <input type="text" id="story-title" placeholder="Например: Поход к врачу">
-
-    <label>Шаги истории:</label>
+    <label>Шаги:</label>
     <div id="story-steps">
         <div class="story-step"><div class="step-num">1</div><input type="text" class="step-input" placeholder="Мы собираемся и выходим из дома"><button class="step-remove" onclick="removeStep(this)">×</button></div>
-        <div class="story-step"><div class="step-num">2</div><input type="text" class="step-input" placeholder="Мы едем на машине в поликлинику"><button class="step-remove" onclick="removeStep(this)">×</button></div>
+        <div class="story-step"><div class="step-num">2</div><input type="text" class="step-input" placeholder="Мы едем в поликлинику"><button class="step-remove" onclick="removeStep(this)">×</button></div>
         <div class="story-step"><div class="step-num">3</div><input type="text" class="step-input" placeholder="Мы заходим к доброму врачу"><button class="step-remove" onclick="removeStep(this)">×</button></div>
     </div>
     <button class="add-step-btn" onclick="addStep()">+ Добавить шаг</button>
-
-    <label>Стиль иллюстраций:</label>
+    <label>Стиль:</label>
     <div class="style-options" id="story-styles"></div>
-
-    <button class="gen-btn" onclick="generateStory()">✨ Создать промпты для истории</button>
-    <div class="loading" id="story-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096">Создаём промпты...</p></div>
+    <div class="btn-row">
+        <button class="gen-btn" onclick="generateStory(false)">📝 Только промпты</button>
+        <button class="gen-btn secondary" id="story-ai-btn" onclick="generateStory(true)" disabled>🤖 С картинками</button>
+    </div>
+    <div class="loading" id="story-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096" id="story-loading-text">Создаём историю...</p><div class="progress-bar"><div class="progress-fill" id="story-progress"></div></div></div>
     <div class="result-area" id="story-results"></div>
 </div>
 
-<!-- ====== УСПОКОЕНИЕ ====== -->
+<!-- УСПОКОЕНИЕ -->
 <div class="section" id="section-calming">
     <h2>🌊 Успокаивающие визуализации</h2>
-    <p class="desc">Выберите сцену или опишите свою — получите промпт для спокойного изображения.</p>
-
+    <p class="desc">Выберите сцену — получите спокойное изображение.</p>
     <label>Выберите сцену:</label>
     <div class="grid-select" id="calming-grid"></div>
-
     <label>Или опишите свою:</label>
     <textarea id="calming-custom" placeholder="Например: плавно плывущие медузы в голубом аквариуме..."></textarea>
-
-    <label>Цветовая палитра:</label>
+    <label>Палитра:</label>
     <div class="style-options" id="calming-palettes">
         <div class="style-btn selected" data-value="muted" onclick="selectPalette(this)">🎨 Приглушённая</div>
         <div class="style-btn" data-value="pastel" onclick="selectPalette(this)">🌸 Пастельная</div>
         <div class="style-btn" data-value="warm" onclick="selectPalette(this)">🌅 Тёплая</div>
         <div class="style-btn" data-value="cool" onclick="selectPalette(this)">🧊 Холодная</div>
     </div>
-
-    <button class="gen-btn" onclick="generateCalming()">✨ Создать промпт визуализации</button>
-    <div class="loading" id="calming-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096">Создаём промпт...</p></div>
+    <div class="btn-row">
+        <button class="gen-btn" onclick="generateCalming(false)">📝 Только промпт</button>
+        <button class="gen-btn secondary" id="calming-ai-btn" onclick="generateCalming(true)" disabled>🤖 Сгенерировать картинку</button>
+    </div>
+    <div class="loading" id="calming-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096">Создаём визуализацию...</p></div>
     <div class="result-area" id="calming-results"></div>
 </div>
 
-<!-- ====== ПРИМЕЧАНИЯ ====== -->
-<div class="notice info" style="margin-top:20px">
-    💡 <b>Как это работает:</b> Инструмент создаёт оптимизированные промпты (текстовые описания). Скопируйте их в любой бесплатный ИИ-генератор:
-    <a href="https://ideogram.ai" target="_blank">Ideogram.ai</a>,
-    <a href="https://www.bing.com/images/create" target="_blank">Bing Image Creator</a>,
-    <a href="https://leonardo.ai" target="_blank">Leonardo.ai</a>
-</div>
-<div class="notice warn">
-    🧩 Этот инструмент создан для поддержки — он <b>не заменяет</b> консультации специалистов.
+<div class="notice warn" style="margin-top:20px">🧩 Инструмент для поддержки — <b>не заменяет</b> специалистов.</div>
 </div>
 
-</div>
+<div class="footer">🧩 NeuroVisual Helper v2.0 — Сделано с ❤️ для особенных людей</div>
 
-<div class="footer">
-    🧩 NeuroVisual Helper v1.0<br>
-    Сделано с ❤️ для особенных людей
-</div>
-
-<!-- ============================================================ -->
-<!--                        JAVASCRIPT                            -->
-<!-- ============================================================ -->
 <script>
+// ====== ПЕРЕМЕННЫЕ ======
+let selectedPecsStyle='minimalist', selectedEmotionStyle='cartoon', selectedStoryStyle='cartoon';
+let selectedEmotion=null, selectedScene=null, selectedPalette='muted', aiEnabled=false;
 
-// ====== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ======
-let selectedPecsStyle = 'minimalist';
-let selectedEmotionStyle = 'cartoon';
-let selectedStoryStyle = 'cartoon';
-let selectedEmotion = null;
-let selectedScene = null;
-let selectedPalette = 'muted';
-
-// ====== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ======
-function switchTab(name) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.getElementById('section-' + name).classList.add('active');
-    const map = { pecs: 0, emotions: 1, stories: 2, calming: 3 };
-    document.querySelectorAll('.tab')[map[name]].classList.add('active');
+// ====== ВКЛАДКИ ======
+function switchTab(n){
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('section-'+n).classList.add('active');
+    const m={pecs:0,emotions:1,stories:2,calming:3};
+    document.querySelectorAll('.tab')[m[n]].classList.add('active');
 }
 
-// ====== ЗАГРУЗКА ДАННЫХ ======
-async function loadData() {
-    try {
-        const [templatesRes, stylesRes, emotionsRes, scenesRes] = await Promise.all([
-            fetch('/api/templates'),
-            fetch('/api/styles'),
-            fetch('/api/emotions'),
-            fetch('/api/calming-scenes')
-        ]);
-        const templates = await templatesRes.json();
-        const styles = await stylesRes.json();
-        const emotionsList = await emotionsRes.json();
-        const scenes = await scenesRes.json();
+// ====== ЗАГРУЗКА ======
+async function loadData(){
+    try{
+        // Проверяем AI статус
+        const health = await fetch('/api/health').then(r=>r.json());
+        aiEnabled = health.aiEnabled;
+        const badge = document.getElementById('ai-status');
+        if(aiEnabled){
+            badge.className='ai-badge on';
+            badge.textContent='🤖 AI генерация включена';
+            document.querySelectorAll('.gen-btn.secondary').forEach(b=>b.disabled=false);
+        } else {
+            badge.className='ai-badge off';
+            badge.textContent='📝 Режим промптов (AI не подключён)';
+        }
 
+        const [templates,stylesList,emotionsList,scenes] = await Promise.all([
+            fetch('/api/templates').then(r=>r.json()),
+            fetch('/api/styles').then(r=>r.json()),
+            fetch('/api/emotions').then(r=>r.json()),
+            fetch('/api/calming-scenes').then(r=>r.json())
+        ]);
         renderQuickBtns(templates);
-        renderStyleBtns('pecs-styles', styles, 'pecs', 'minimalist');
-        renderStyleBtns('emotion-styles', styles, 'emotion', 'cartoon');
-        renderStyleBtns('story-styles', styles, 'story', 'cartoon');
+        renderStyleBtns('pecs-styles',stylesList,'pecs','minimalist');
+        renderStyleBtns('emotion-styles',stylesList,'emotion','cartoon');
+        renderStyleBtns('story-styles',stylesList,'story','cartoon');
         renderEmotionGrid(emotionsList);
         renderSceneGrid(scenes);
-    } catch(e) {
-        console.warn('Сервер не отвечает, используем оффлайн-режим', e);
+    }catch(e){
+        console.warn('Оффлайн',e);
+        document.getElementById('ai-status').className='ai-badge off';
+        document.getElementById('ai-status').textContent='⚠️ Сервер недоступен';
         loadOffline();
     }
 }
 
-// ====== ОФФЛАЙН РЕЖИМ (если сервер не запущен) ======
-function loadOffline() {
-    const defaultTemplates = [
-        {text:'хочу пить',emoji:'💧'},{text:'хочу есть',emoji:'🍽️'},{text:'туалет',emoji:'🚽'},
-        {text:'играть',emoji:'🧩'},{text:'гулять',emoji:'🚶'},{text:'спать',emoji:'😴'},
-        {text:'помощь',emoji:'🙋'},{text:'да',emoji:'✅'},{text:'нет',emoji:'❌'},
-        {text:'больно',emoji:'🤕'},{text:'мама',emoji:'👩'},{text:'папа',emoji:'👨'},
-        {text:'музыка',emoji:'🎵'},{text:'обнять',emoji:'🤗'},{text:'устал',emoji:'😫'},
-        {text:'стоп',emoji:'✋'},{text:'школа',emoji:'🏫'},{text:'дом',emoji:'🏠'},
-        {text:'читать',emoji:'📖'},{text:'рисовать',emoji:'🖍️'},{text:'мыть руки',emoji:'🧼'},
-        {text:'чистить зубы',emoji:'🪥'},{text:'одеваться',emoji:'👕'},{text:'друг',emoji:'👫'},
-        {text:'врач',emoji:'👨‍⚕️'},{text:'купаться',emoji:'🛁'},{text:'ждать',emoji:'⏰'},
-        {text:'тихо',emoji:'🤫'},{text:'слушать',emoji:'👂'},{text:'смотреть',emoji:'👀'}
-    ];
-    const defaultStyles = [
-        {id:'minimalist',name:'Минималистичный'},{id:'cartoon',name:'Мультяшный'},
-        {id:'realistic',name:'Реалистичный'},{id:'schematic',name:'Схематичный'},{id:'pastel',name:'Пастельный'}
-    ];
-    const defaultEmotions = [
-        {id:'happy',name:'Радость',emoji:'😊'},{id:'sad',name:'Грусть',emoji:'😢'},
-        {id:'angry',name:'Злость',emoji:'😠'},{id:'scared',name:'Страх',emoji:'😨'},
-        {id:'surprised',name:'Удивление',emoji:'😲'},{id:'calm',name:'Спокойствие',emoji:'😌'},
-        {id:'confused',name:'Замешательство',emoji:'🤔'},{id:'disgusted',name:'Отвращение',emoji:'🤢'}
-    ];
-    const defaultScenes = [
-        {id:'jellyfish',name:'Медузы',emoji:'🪼'},{id:'rain',name:'Дождь',emoji:'🌧️'},
-        {id:'aurora',name:'Северное сияние',emoji:'🌌'},{id:'clouds',name:'Облака',emoji:'☁️'},
-        {id:'fireplace',name:'Камин',emoji:'🔥'},{id:'waves',name:'Волны',emoji:'🌊'},
-        {id:'snowfall',name:'Снегопад',emoji:'❄️'},{id:'garden',name:'Сад',emoji:'🦋'},
-        {id:'underwater',name:'Под водой',emoji:'🐠'},{id:'lava_lamp',name:'Лава-лампа',emoji:'🫧'}
-    ];
-
-    renderQuickBtns(defaultTemplates);
-    renderStyleBtns('pecs-styles', defaultStyles, 'pecs', 'minimalist');
-    renderStyleBtns('emotion-styles', defaultStyles, 'emotion', 'cartoon');
-    renderStyleBtns('story-styles', defaultStyles, 'story', 'cartoon');
-    renderEmotionGrid(defaultEmotions);
-    renderSceneGrid(defaultScenes);
+function loadOffline(){
+    const t=[{text:'хочу пить',emoji:'💧'},{text:'хочу есть',emoji:'🍽️'},{text:'туалет',emoji:'🚽'},{text:'играть',emoji:'🧩'},{text:'гулять',emoji:'🚶'},{text:'спать',emoji:'😴'},{text:'помощь',emoji:'🙋'},{text:'да',emoji:'✅'},{text:'нет',emoji:'❌'},{text:'больно',emoji:'🤕'},{text:'мама',emoji:'👩'},{text:'папа',emoji:'👨'},{text:'музыка',emoji:'🎵'},{text:'обнять',emoji:'🤗'},{text:'устал',emoji:'😫'},{text:'стоп',emoji:'✋'},{text:'школа',emoji:'🏫'},{text:'дом',emoji:'🏠'},{text:'читать',emoji:'📖'},{text:'рисовать',emoji:'🖍️'},{text:'мыть руки',emoji:'🧼'},{text:'одеваться',emoji:'👕'},{text:'друг',emoji:'👫'},{text:'врач',emoji:'👨‍⚕️'}];
+    const s=[{id:'minimalist',name:'Минималистичный'},{id:'cartoon',name:'Мультяшный'},{id:'realistic',name:'Реалистичный'},{id:'schematic',name:'Схематичный'},{id:'pastel',name:'Пастельный'}];
+    const em=[{id:'happy',name:'Радость',emoji:'😊'},{id:'sad',name:'Грусть',emoji:'😢'},{id:'angry',name:'Злость',emoji:'😠'},{id:'scared',name:'Страх',emoji:'😨'},{id:'surprised',name:'Удивление',emoji:'😲'},{id:'calm',name:'Спокойствие',emoji:'😌'},{id:'confused',name:'Замешательство',emoji:'🤔'},{id:'disgusted',name:'Отвращение',emoji:'🤢'}];
+    const sc=[{id:'jellyfish',name:'Медузы',emoji:'🪼'},{id:'rain',name:'Дождь',emoji:'🌧️'},{id:'aurora',name:'Сияние',emoji:'🌌'},{id:'clouds',name:'Облака',emoji:'☁️'},{id:'fireplace',name:'Камин',emoji:'🔥'},{id:'waves',name:'Волны',emoji:'🌊'},{id:'snowfall',name:'Снегопад',emoji:'❄️'},{id:'garden',name:'Сад',emoji:'🦋'}];
+    renderQuickBtns(t);renderStyleBtns('pecs-styles',s,'pecs','minimalist');renderStyleBtns('emotion-styles',s,'emotion','cartoon');renderStyleBtns('story-styles',s,'story','cartoon');renderEmotionGrid(em);renderSceneGrid(sc);
 }
 
-// ====== ОФФЛАЙН ПРОМПТЫ ======
-const offlinePrompts = {
-    'хочу пить': 'A clear glass of drinking water, minimalist illustration, white background, simple clean vector style, no text, centered',
-    'хочу есть': 'A plate with simple food and fork, minimalist illustration, white background, simple clean vector style, no text, centered',
-    'туалет': 'A clean toilet symbol, simple bathroom icon, minimalist illustration, white background, no text, centered',
-    'играть': 'Colorful building blocks toys, minimalist illustration, white background, simple clean style, no text, centered',
-    'гулять': 'A person walking outside in sunshine with trees, minimalist illustration, white background, simple clean style, no text',
-    'спать': 'A person sleeping peacefully in bed, minimalist illustration, white background, simple style, no text',
-    'помощь': 'A raised hand asking for help, minimalist illustration, white background, simple clean style, no text',
-        'да': 'Green checkmark and thumbs up approval symbol, minimalist illustration, white background, simple clean style, no text',
-    'нет': 'Red X mark gentle refusal symbol, minimalist illustration, white background, simple clean style, no text',
-    'больно': 'A person pointing to pain with sad face, minimalist illustration, white background, no text',
-    'мама': 'A caring mother figure smiling, minimalist illustration, white background, simple clean style, no text',
-    'папа': 'A caring father figure smiling, minimalist illustration, white background, simple clean style, no text',
-    'музыка': 'Headphones with musical notes, minimalist illustration, white background, simple clean style, no text',
-    'обнять': 'Two people hugging warmly, minimalist illustration, white background, simple clean style, no text',
-    'устал': 'A tired person yawning sleepy, minimalist illustration, white background, simple clean style, no text',
-    'стоп': 'Stop hand gesture red stop sign, minimalist illustration, white background, simple clean style, no text',
-    'школа': 'A simple school building, minimalist illustration, white background, clean style, no text',
-    'дом': 'A cozy house home symbol, minimalist illustration, white background, clean style, no text',
-    'читать': 'An open book reading, minimalist illustration, white background, clean style, no text',
-    'рисовать': 'Crayons and paper drawing activity, minimalist illustration, white background, clean style, no text',
-    'мыть руки': 'Hands washed with soap under water faucet, minimalist illustration, white background, clean style, no text',
-    'чистить зубы': 'Toothbrush with toothpaste dental hygiene, minimalist illustration, white background, clean style, no text',
-    'одеваться': 'Shirt and pants clothing getting dressed, minimalist illustration, white background, clean style, no text',
-    'друг': 'Two children playing together friendship, minimalist illustration, white background, clean style, no text',
-    'врач': 'Friendly doctor with stethoscope, minimalist illustration, white background, clean style, no text',
-    'купаться': 'Bathtub with warm water and bubbles, minimalist illustration, white background, clean style, no text',
-    'ждать': 'Clock and patient person sitting calmly waiting, minimalist illustration, white background, clean style, no text',
-    'тихо': 'Finger on lips quiet gesture silence, minimalist illustration, white background, clean style, no text',
-    'слушать': 'Ear listening carefully paying attention, minimalist illustration, white background, clean style, no text',
-    'смотреть': 'Eyes looking watching carefully, minimalist illustration, white background, clean style, no text'
-};
-
-const offlineStyleSuffix = {
-    minimalist: ', minimalist illustration, simple shapes, flat design, clear outlines, white background, vector art style, no clutter',
-    cartoon: ', friendly cartoon illustration, soft rounded shapes, warm colors, child-friendly, cute, clean background',
-    realistic: ', clear realistic photograph, well-lit, simple composition, centered, soft lighting, clean background',
-    schematic: ', simple pictogram, icon style, black outline on white background, bold lines, high contrast',
-    pastel: ', soft pastel illustration, gentle colors, watercolor style, calming, muted tones, light background'
-};
-
-const offlineNegative = {
-    minimalist: 'complex background, many details, realistic textures, shadows, text, watermark, nsfw, violent, scary',
-    cartoon: 'scary, dark, complex background, realistic, violent, text, watermark, nsfw',
-    realistic: 'blurry, dark, complex scene, text overlay, watermark, busy background, nsfw, violent, scary',
-    schematic: 'colorful, detailed, realistic, 3d, shadow, gradient, text, complex, nsfw, violent',
-    pastel: 'bright neon colors, harsh contrast, dark, scary, complex, text, watermark, nsfw, violent'
-};
-
-const offlineEmotionPrompts = {
-    happy: {
-        low: 'Portrait of a person with slight smile, content, peaceful happiness, clear facial expression, front view',
-        medium: 'Portrait of a person with clear smile, happy eyes, visibly pleased, joyful, clear facial expression, front view',
-        high: 'Portrait of a person with big bright smile, laughing, very joyful, eyes crinkled with happiness, clear facial expression, front view'
-    },
-    sad: {
-        low: 'Portrait of a person slightly downcast, pensive, mild disappointment, clear facial expression, front view',
-        medium: 'Portrait of a person clearly sad, frowning, unhappy eyes, melancholic, clear facial expression, front view',
-        high: 'Portrait of a person very sad, tears in eyes, deeply upset, crying, clear facial expression, front view'
-    },
-    angry: {
-        low: 'Portrait of a person slightly annoyed, mild frustration, tense jaw, clear facial expression, front view',
-        medium: 'Portrait of a person clearly angry, furrowed eyebrows, frowning, intense stare, clear facial expression, front view',
-        high: 'Portrait of a person very angry, red face, clenched teeth, intense furious expression, clear facial expression, front view'
-    },
-    scared: {
-        low: 'Portrait of a person slightly worried, nervous, uneasy expression, clear facial expression, front view',
-        medium: 'Portrait of a person clearly frightened, wide eyes, tense, fearful, clear facial expression, front view',
-        high: 'Portrait of a person very scared, terrified, gasping, frozen with fear, wide eyes, clear facial expression, front view'
-    },
-    surprised: {
-        low: 'Portrait of a person slightly surprised, raised eyebrows, curious look, clear facial expression, front view',
-        medium: 'Portrait of a person clearly surprised, open mouth, wide eyes, amazed, clear facial expression, front view',
-        high: 'Portrait of a person extremely surprised, shocked, jaw dropped, eyes very wide, clear facial expression, front view'
-    },
-    calm: {
-        low: 'Portrait of a person with neutral relaxed face, at ease, peaceful, clear facial expression, front view',
-        medium: 'Portrait of a person clearly calm, slight smile, serene eyes, peaceful, clear facial expression, front view',
-        high: 'Portrait of a person deeply peaceful, meditative calm, pure serenity, zen-like, clear facial expression, front view'
-    },
-    confused: {
-        low: 'Portrait of a person slightly puzzled, thinking, questioning look, clear facial expression, front view',
-        medium: 'Portrait of a person clearly confused, scratching head, uncertain expression, clear facial expression, front view',
-        high: 'Portrait of a person very confused, lost, overwhelmed, bewildered, clear facial expression, front view'
-    },
-    disgusted: {
-        low: 'Portrait of a person mildly displeased, slight nose wrinkle, clear facial expression, front view',
-        medium: 'Portrait of a person clearly disgusted, wrinkled nose, frowning, clear facial expression, front view',
-        high: 'Portrait of a person very disgusted, strong grimace, turned away, repulsed, clear facial expression, front view'
-    }
-};
-
-const offlineCalmingPrompts = {
-    jellyfish: 'Ethereal jellyfish floating gently in deep blue ocean, bioluminescent glow, slow graceful movement, serene underwater scene, soft light rays, peaceful, mesmerizing, calming',
-    rain: 'Raindrops on window glass, close-up view, blurred city lights background, cozy rainy day, water droplets sliding down, warm indoor atmosphere, relaxing',
-    aurora: 'Beautiful aurora borealis over calm lake, green and purple lights dancing in night sky, stars visible, mirror reflection in still water, serene Nordic landscape, magical',
-    clouds: 'Fluffy white clouds slowly drifting across bright blue sky, peaceful sunny day, cotton-like cumulus clouds, infinite sky, serene and calming',
-    fireplace: 'Cozy fireplace with gentle flames, warm orange glow, comfortable living room, soft warm lighting, hygge atmosphere, relaxing evening',
-    waves: 'Gentle ocean waves lapping on sandy beach, soft sunset colors, peaceful seashore, foam on sand, rhythmic waves, golden hour light, calming',
-    snowfall: 'Gentle snowfall at night, soft snowflakes falling slowly, warm street lights, quiet winter scene, peaceful snowy evening, magical atmosphere',
-    garden: 'Peaceful garden with colorful butterflies, soft sunlight, blooming flowers, gentle breeze, lavender and daisies, nature paradise, calming',
-    underwater: 'Calm underwater coral reef, gentle fish swimming slowly, sunlight filtering through water, colorful but muted corals, peaceful ocean, bubbles floating',
-    lava_lamp: 'Colorful lava lamp with smooth blobs floating up and down, warm purple and blue colors, hypnotic movement, soft glow, mesmerizing shapes'
-};
-
-const offlinePaletteSuffix = {
-    muted: ', muted desaturated colors, low saturation, calm palette',
-    pastel: ', pastel colors, soft pink, light blue, gentle yellow, mint green',
-    warm: ', warm gentle colors, soft orange, cream, light brown',
-    cool: ', cool calming colors, light blue, soft teal, lavender'
-};
-
-// ====== ОТРИСОВКА ЭЛЕМЕНТОВ ======
-
-function renderQuickBtns(templates) {
-    const c = document.getElementById('pecs-quick-btns');
-    c.innerHTML = templates.map(t =>
-        '<div class="quick-btn" onclick="addQuickWord(\'' + t.text + '\')">' + t.emoji + ' ' + t.text + '</div>'
-    ).join('');
+// ====== РЕНДЕР ======
+function renderQuickBtns(list){
+    document.getElementById('pecs-quick-btns').innerHTML=list.map(t=>'<div class="quick-btn" onclick="addQuickWord(\''+t.text+'\')">'+t.emoji+' '+t.text+'</div>').join('');
+}
+function renderStyleBtns(id,list,mode,def){
+    document.getElementById(id).innerHTML=list.map(s=>'<div class="style-btn'+(s.id===def?' selected':'')+'" data-value="'+s.id+'" onclick="selectStyle(this,\''+mode+'\')">'+s.name+'</div>').join('');
+}
+function renderEmotionGrid(list){
+    document.getElementById('emotions-grid').innerHTML=list.map(e=>'<div class="grid-item" data-value="'+e.id+'" onclick="selectEmotion(this)"><div class="grid-item-emoji">'+e.emoji+'</div><div class="grid-item-name">'+e.name+'</div></div>').join('');
+}
+function renderSceneGrid(list){
+    document.getElementById('calming-grid').innerHTML=list.map(s=>'<div class="grid-item" data-value="'+s.id+'" onclick="selectSceneItem(this)"><div class="grid-item-emoji">'+s.emoji+'</div><div class="grid-item-name">'+s.name+'</div></div>').join('');
 }
 
-function renderStyleBtns(containerId, styles, mode, defaultId) {
-    const c = document.getElementById(containerId);
-    c.innerHTML = styles.map(s =>
-        '<div class="style-btn' + (s.id === defaultId ? ' selected' : '') + '" data-value="' + s.id + '" onclick="selectStyle(this, \'' + mode + '\')">' + s.name + '</div>'
-    ).join('');
-}
+// ====== ВЫБОР ======
+function addQuickWord(w){const i=document.getElementById('pecs-input');const c=i.value.trim();if(c){const ws=c.split('\n').map(x=>x.trim().toLowerCase());if(!ws.includes(w.toLowerCase()))i.value=c+'\n'+w}else i.value=w}
+function selectStyle(b,m){b.parentElement.querySelectorAll('.style-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');const v=b.getAttribute('data-value');if(m==='pecs')selectedPecsStyle=v;else if(m==='emotion')selectedEmotionStyle=v;else if(m==='story')selectedStoryStyle=v}
+function selectEmotion(el){document.querySelectorAll('#emotions-grid .grid-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');selectedEmotion=el.getAttribute('data-value')}
+function selectSceneItem(el){document.querySelectorAll('#calming-grid .grid-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');selectedScene=el.getAttribute('data-value');document.getElementById('calming-custom').value=''}
+function selectPalette(b){document.querySelectorAll('#calming-palettes .style-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');selectedPalette=b.getAttribute('data-value')}
 
-function renderEmotionGrid(list) {
-    const c = document.getElementById('emotions-grid');
-    c.innerHTML = list.map(e =>
-        '<div class="grid-item" data-value="' + e.id + '" onclick="selectEmotion(this)">' +
-        '<div class="grid-item-emoji">' + e.emoji + '</div>' +
-        '<div class="grid-item-name">' + e.name + '</div></div>'
-    ).join('');
-}
-
-function renderSceneGrid(list) {
-    const c = document.getElementById('calming-grid');
-    c.innerHTML = list.map(s =>
-        '<div class="grid-item" data-value="' + s.id + '" onclick="selectSceneItem(this)">' +
-        '<div class="grid-item-emoji">' + s.emoji + '</div>' +
-        '<div class="grid-item-name">' + s.name + '</div></div>'
-    ).join('');
-}
-
-// ====== ОБРАБОТЧИКИ ВЫБОРА ======
-
-function addQuickWord(word) {
-    const input = document.getElementById('pecs-input');
-    const current = input.value.trim();
-    if (current) {
-        // Проверяем нет ли уже такого слова
-        const words = current.split('\n').map(w => w.trim().toLowerCase());
-        if (!words.includes(word.toLowerCase())) {
-            input.value = current + '\n' + word;
-        }
-    } else {
-        input.value = word;
-    }
-}
-
-function selectStyle(btn, mode) {
-    const parent = btn.parentElement;
-    parent.querySelectorAll('.style-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    const value = btn.getAttribute('data-value');
-    if (mode === 'pecs') selectedPecsStyle = value;
-    else if (mode === 'emotion') selectedEmotionStyle = value;
-    else if (mode === 'story') selectedStoryStyle = value;
-}
-
-function selectEmotion(item) {
-    document.querySelectorAll('#emotions-grid .grid-item').forEach(i => i.classList.remove('selected'));
-    item.classList.add('selected');
-    selectedEmotion = item.getAttribute('data-value');
-}
-
-function selectSceneItem(item) {
-    document.querySelectorAll('#calming-grid .grid-item').forEach(i => i.classList.remove('selected'));
-    item.classList.add('selected');
-    selectedScene = item.getAttribute('data-value');
-    // Очищаем пользовательское описание если выбрана готовая сцена
-    document.getElementById('calming-custom').value = '';
-}
-
-function selectPalette(btn) {
-    document.querySelectorAll('#calming-palettes .style-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    selectedPalette = btn.getAttribute('data-value');
-}
-
-// ====== КОПИРОВАНИЕ ПРОМПТА ======
-
-function copyPrompt(btn, text) {
-    navigator.clipboard.writeText(text).then(() => {
-        const original = btn.textContent;
-        btn.textContent = '✅ Скопировано!';
-        btn.classList.add('copied');
-        setTimeout(() => {
-            btn.textContent = original;
-            btn.classList.remove('copied');
-        }, 2000);
-    }).catch(() => {
-        // Fallback для старых браузеров
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand('copy');
-        document.body.removeChild(textarea);
-        const original = btn.textContent;
-        btn.textContent = '✅ Скопировано!';
-        btn.classList.add('copied');
-        setTimeout(() => {
-            btn.textContent = original;
-            btn.classList.remove('copied');
-        }, 2000);
+// ====== КОПИРОВАНИЕ ======
+function copyPrompt(btn,text){
+    navigator.clipboard.writeText(text).then(()=>{
+        const o=btn.textContent;btn.textContent='✅ Скопировано!';btn.classList.add('copied');
+        setTimeout(()=>{btn.textContent=o;btn.classList.remove('copied')},2000);
+    }).catch(()=>{
+        const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+        const o=btn.textContent;btn.textContent='✅ Скопировано!';btn.classList.add('copied');
+        setTimeout(()=>{btn.textContent=o;btn.classList.remove('copied')},2000);
     });
 }
 
-// ====== СОЦИАЛЬНЫЕ ИСТОРИИ — ШАГИ ======
-
-function addStep() {
-    const container = document.getElementById('story-steps');
-    const count = container.children.length + 1;
-    const step = document.createElement('div');
-    step.className = 'story-step';
-    step.innerHTML = '<div class="step-num">' + count + '</div>' +
-        '<input type="text" class="step-input" placeholder="Опишите что происходит на шаге ' + count + '">' +
-        '<button class="step-remove" onclick="removeStep(this)">×</button>';
-    container.appendChild(step);
+// ====== ШАГИ ИСТОРИИ ======
+function addStep(){
+    const c=document.getElementById('story-steps');const n=c.children.length+1;
+    const d=document.createElement('div');d.className='story-step';
+    d.innerHTML='<div class="step-num">'+n+'</div><input type="text" class="step-input" placeholder="Шаг '+n+'"><button class="step-remove" onclick="removeStep(this)">×</button>';
+    c.appendChild(d);
+}
+function removeStep(btn){
+    const c=document.getElementById('story-steps');
+    if(c.children.length>1){btn.parentElement.remove();Array.from(c.children).forEach((s,i)=>{s.querySelector('.step-num').textContent=i+1})}
 }
 
-function removeStep(btn) {
-    const container = document.getElementById('story-steps');
-    if (container.children.length > 1) {
-        btn.parentElement.remove();
-        // Перенумеруем
-        Array.from(container.children).forEach((step, i) => {
-            step.querySelector('.step-num').textContent = i + 1;
-        });
+// ====== РЕНДЕР КАРТОЧКИ ======
+function renderCard(card, index, prefix){
+    const pid=prefix+'-prompt-'+index;
+    const nid=prefix+'-neg-'+index;
+    let imgHtml;
+    if(card.imageUrl){
+        imgHtml='<div class="card-icon"><img src="'+card.imageUrl+'" alt="'+card.text+'" loading="lazy"></div>';
+    } else {
+        imgHtml='<div class="card-icon">'+(card.emoji||'🖼️')+'</div>';
     }
+    let html='<div class="card">'+imgHtml+'<div class="card-label">'+card.text+'</div>';
+    if(card.imageUrl){
+        html+='<a class="dl-btn" href="'+card.imageUrl+'" download="'+card.text+'.png">⬇️ Скачать</a>';
+    }
+    if(card.imageError){
+        html+='<div class="notice error" style="margin-top:8px;padding:8px;font-size:11px">❌ '+card.imageError+'</div>';
+    }
+    html+='<details class="prompt-box"><summary>📝 Показать промпт</summary>';
+    html+='<div class="prompt-text" id="'+pid+'">'+card.prompt+'</div>';
+    html+='<div class="neg-prompt-text" id="'+nid+'">Negative: '+card.negative_prompt+'</div>';
+    html+='<button class="copy-btn" onclick="copyPrompt(this,document.getElementById(\''+pid+'\').textContent)">📋 Копировать</button>';
+    html+='</details></div>';
+    return html;
+}
+
+// ====== РЕНДЕР ОДИНОЧНОГО РЕЗУЛЬТАТА ======
+function renderSingleResult(data, prefix){
+    let html='<div class="single-result"><div class="result-header">';
+    html+='<div class="result-emoji">'+(data.emoji||'🎨')+'</div>';
+    html+='<div><div class="result-title">'+(data.title||data.emotion||data.scene||'')+'</div>';
+    if(data.subtitle) html+='<div class="result-subtitle">'+data.subtitle+'</div>';
+    html+='</div></div>';
+    if(data.imageUrl){
+        html+='<img class="result-image" src="'+data.imageUrl+'" alt="result">';
+        html+='<div style="text-align:center"><a class="dl-btn" href="'+data.imageUrl+'" download="result.png">⬇️ Скачать картинку</a></div>';
+    }
+    if(data.imageError){
+        html+='<div class="notice error">❌ Ошибка генерации: '+data.imageError+'</div>';
+    }
+    const pid=prefix+'-prompt-main';
+    const nid=prefix+'-neg-main';
+    html+='<div class="prompt-text" id="'+pid+'" style="margin-top:12px">'+data.prompt+'</div>';
+    html+='<div class="neg-prompt-text" id="'+nid+'">Negative: '+data.negative_prompt+'</div>';
+    html+='<button class="copy-btn" onclick="copyPrompt(this,document.getElementById(\''+pid+'\').textContent)">📋 Копировать промпт</button>';
+    html+='</div>';
+    return html;
 }
 
 // ====== ГЕНЕРАЦИЯ PECS ======
+async function generatePECS(withImages){
+    const input=document.getElementById('pecs-input').value.trim();
+    if(!input){alert('Введите хотя бы одно слово!');return}
+    const items=input.split(/[\n,]+/).map(s=>s.trim()).filter(s=>s.length>0);
+    if(items.length===0){alert('Введите хотя бы одно слово!');return}
+    if(items.length>10){alert('Максимум 10 карточек за раз!');return}
 
-async function generatePECS() {
-    const input = document.getElementById('pecs-input').value.trim();
-    if (!input) {
-        alert('Введите хотя бы одно слово для карточки!');
-        return;
-    }
+    const loading=document.getElementById('pecs-loading');
+    const loadText=document.getElementById('pecs-loading-text');
+    const progress=document.getElementById('pecs-progress');
+    const results=document.getElementById('pecs-results');
 
-    // Разбиваем по строкам и запятым
-    const items = input
-        .split(/[\n,]+/)
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
-
-    if (items.length === 0) {
-        alert('Введите хотя бы одно слово!');
-        return;
-    }
-
-    if (items.length > 20) {
-        alert('Максимум 20 карточек за раз!');
-        return;
-    }
-
-    const loading = document.getElementById('pecs-loading');
-    const results = document.getElementById('pecs-results');
     loading.classList.add('show');
-    results.innerHTML = '';
+    results.innerHTML='';
 
-    // Небольшая задержка для анимации
-    await new Promise(r => setTimeout(r, 500));
-
-    let cards;
-
-    try {
-        // Пробуем через сервер
-        const res = await fetch('/api/generate/pecs', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: items, style: selectedPecsStyle })
-        });
-        const data = await res.json();
-        cards = data.cards;
-    } catch(e) {
-        // Оффлайн режим
-        console.log('Оффлайн генерация PECS');
-        const suffix = offlineStyleSuffix[selectedPecsStyle] || offlineStyleSuffix.minimalist;
-        const negative = offlineNegative[selectedPecsStyle] || offlineNegative.minimalist;
-
-        cards = items.map(item => {
-            const key = item.toLowerCase().trim();
-            const basePrompt = offlinePrompts[key] || 
-                'Clear visual representation of "' + item + '", single concept, easy to understand, communication card';
-            return {
-                text: item,
-                emoji: getEmoji(key),
-                prompt: basePrompt + suffix,
-                negative_prompt: negative,
-                style: selectedPecsStyle
-            };
-        });
+    if(withImages && aiEnabled){
+        loadText.textContent='Генерация картинок (0/'+items.length+')... Это может занять 1-2 минуты';
+        progress.style.width='5%';
+    } else {
+        loadText.textContent='Создаём промпты...';
+        progress.style.width='50%';
     }
 
-    loading.classList.remove('show');
+    try{
+        const res=await fetch('/api/generate/pecs',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({items:items,style:selectedPecsStyle,withImages:withImages})
+        });
+        const data=await res.json();
 
-    // Отрисовываем результат
-    let html = '<h3>🃏 Ваши карточки (' + cards.length + ' шт.)</h3>';
-    html += '<div class="notice success">✅ Промпты готовы! Нажмите «Копировать» под нужной карточкой и вставьте в генератор изображений.</div>';
-    html += '<div class="cards-grid">';
+        if(data.error){
+            loading.classList.remove('show');
+            results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';
+            return;
+        }
 
-    cards.forEach((card, i) => {
-        const promptId = 'prompt-pecs-' + i;
-        const negId = 'neg-pecs-' + i;
-        html += '<div class="card">' +
-            '<div class="card-icon">' + (card.emoji || '🖼️') + '</div>' +
-            '<div class="card-label">' + card.text + '</div>' +
-            '<details class="prompt-box">' +
-            '<summary>📝 Показать промпт</summary>' +
-            '<div class="prompt-text" id="' + promptId + '">' + card.prompt + '</div>' +
-            '<div class="neg-prompt-text" id="' + negId + '">Negative: ' + card.negative_prompt + '</div>' +
-            '<button class="copy-btn" onclick="copyPrompt(this, document.getElementById(\'' + promptId + '\').textContent)">📋 Копировать промпт</button> ' +
-            '<button class="copy-btn" onclick="copyPrompt(this, document.getElementById(\'' + negId + '\').textContent)">📋 Копировать negative</button>' +
-            '</details></div>';
-    });
+        progress.style.width='100%';
+        setTimeout(()=>{loading.classList.remove('show')},300);
 
-    html += '</div>';
-    results.innerHTML = html;
-}
+        let html='<h3>🃏 Ваши карточки ('+data.cards.length+' шт.)</h3>';
+        const hasImages=data.cards.some(c=>c.imageUrl);
+        if(hasImages){
+            html+='<div class="notice success">✅ Картинки сгенерированы! Нажмите «Скачать» под каждой.</div>';
+        } else {
+            html+='<div class="notice info">📝 Промпты готовы! Нажмите «Показать промпт» → «Копировать» → вставьте в генератор картинок.</div>';
+        }
+        html+='<div class="cards-grid">';
+        data.cards.forEach((card,i)=>{html+=renderCard(card,i,'pecs')});
+        html+='</div>';
+        results.innerHTML=html;
 
-function getEmoji(text) {
-    const map = {
-        'хочу пить':'💧','хочу есть':'🍽️','туалет':'🚽','играть':'🧩','гулять':'🚶',
-        'спать':'😴','помощь':'🙋','да':'✅','нет':'❌','больно':'🤕','мама':'👩',
-        'папа':'👨','музыка':'🎵','обнять':'🤗','устал':'😫','стоп':'✋','школа':'🏫',
-        'дом':'🏠','читать':'📖','рисовать':'🖍️','мыть руки':'🧼','чистить зубы':'🪥',
-        'одеваться':'👕','друг':'👫','врач':'👨‍⚕️','купаться':'🛁','ждать':'⏰',
-        'тихо':'🤫','слушать':'👂','смотреть':'👀'
-    };
-    return map[text] || '🖼️';
+    }catch(e){
+        loading.classList.remove('show');
+        results.innerHTML='<div class="notice error">❌ Ошибка: '+e.message+'</div>';
+    }
 }
 
 // ====== ГЕНЕРАЦИЯ ЭМОЦИИ ======
+async function generateEmotion(withImage){
+    if(!selectedEmotion){alert('Выберите эмоцию!');return}
+    const slider=document.getElementById('intensity-slider');
+    const iMap={'1':'low','2':'medium','3':'high'};
+    const intensity=iMap[slider.value]||'medium';
+    const iNames={low:'Слабая',medium:'Средняя',high:'Сильная'};
 
-async function generateEmotion() {
-    if (!selectedEmotion) {
-        alert('Выберите эмоцию!');
-        return;
-    }
+    const loading=document.getElementById('emotion-loading');
+    const results=document.getElementById('emotion-results');
+    loading.classList.add('show');results.innerHTML='';
 
-    const slider = document.getElementById('intensity-slider');
-    const intensityMap = { '1': 'low', '2': 'medium', '3': 'high' };
-    const intensity = intensityMap[slider.value] || 'medium';
-    const intensityNames = { low: 'Слабая', medium: 'Средняя', high: 'Сильная' };
-
-    const loading = document.getElementById('emotion-loading');
-    const results = document.getElementById('emotion-results');
-    loading.classList.add('show');
-    results.innerHTML = '';
-
-    await new Promise(r => setTimeout(r, 400));
-
-    let result;
-
-    try {
-        const res = await fetch('/api/generate/emotion', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                emotion: selectedEmotion,
-                intensity: intensity,
-                style: selectedEmotionStyle
-            })
+    try{
+        const res=await fetch('/api/generate/emotion',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({emotion:selectedEmotion,intensity:intensity,style:selectedEmotionStyle,withImage:withImage})
         });
-        result = await res.json();
-    } catch(e) {
-        console.log('Оффлайн генерация эмоции');
-        const emotionData = offlineEmotionPrompts[selectedEmotion];
-        const suffix = offlineStyleSuffix[selectedEmotionStyle] || offlineStyleSuffix.cartoon;
-        const negative = offlineNegative[selectedEmotionStyle] || offlineNegative.cartoon;
+        const data=await res.json();
+        loading.classList.remove('show');
 
-        const emotionNames = {
-            happy:'Радость',sad:'Грусть',angry:'Злость',scared:'Страх',
-            surprised:'Удивление',calm:'Спокойствие',confused:'Замешательство',disgusted:'Отвращение'
-        };
-        const emotionEmojis = {
-            happy:'😊',sad:'😢',angry:'😠',scared:'😨',
-            surprised:'😲',calm:'😌',confused:'🤔',disgusted:'🤢'
-        };
+        if(data.error){
+            results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';
+            return;
+        }
 
-        result = {
-            success: true,
-            emotion: emotionNames[selectedEmotion] || selectedEmotion,
-            emoji: emotionEmojis[selectedEmotion] || '😐',
-            intensity: intensity,
-            prompt: (emotionData ? emotionData[intensity] : 'Portrait of a person showing emotion') + suffix,
-            negative_prompt: negative,
-            style: selectedEmotionStyle
-        };
+        results.innerHTML=renderSingleResult({
+            emoji:data.emoji,
+            title:data.emotion,
+            subtitle:'Интенсивность: '+iNames[intensity]+' | Стиль: '+data.style,
+            prompt:data.prompt,
+            negative_prompt:data.negative_prompt,
+            imageUrl:data.imageUrl,
+            imageError:data.imageError
+        },'emotion');
+
+    }catch(e){
+        loading.classList.remove('show');
+        results.innerHTML='<div class="notice error">❌ Ошибка: '+e.message+'</div>';
     }
-
-    loading.classList.remove('show');
-
-    const html = '<div class="single-result">' +
-        '<div class="result-header">' +
-        '<div class="result-emoji">' + (result.emoji || '😐') + '</div>' +
-        '<div><div class="result-title">' + result.emotion + '</div>' +
-        '<div class="result-subtitle">Интенсивность: ' + intensityNames[intensity] + ' | Стиль: ' + (result.style || selectedEmotionStyle) + '</div></div></div>' +
-        '<div class="prompt-text" id="emotion-prompt-text">' + result.prompt + '</div>' +
-        '<div class="neg-prompt-text" id="emotion-neg-text">Negative: ' + result.negative_prompt + '</div>' +
-        '<button class="copy-btn" onclick="copyPrompt(this, document.getElementById(\'emotion-prompt-text\').textContent)">📋 Копировать промпт</button> ' +
-        '<button class="copy-btn" onclick="copyPrompt(this, document.getElementById(\'emotion-neg-text\').textContent)">📋 Копировать negative</button>' +
-        '</div>';
-
-    results.innerHTML = html;
 }
 
-// ====== ГЕНЕРАЦИЯ СОЦИАЛЬНОЙ ИСТОРИИ ======
+// ====== ГЕНЕРАЦИЯ ИСТОРИИ ======
+async function generateStory(withImages){
+    const title=document.getElementById('story-title').value.trim()||'Моя история';
+    const stepInputs=document.querySelectorAll('#story-steps .step-input');
+    const steps=Array.from(stepInputs).map(x=>x.value.trim()).filter(s=>s.length>0);
+    if(steps.length===0){alert('Заполните хотя бы один шаг!');return}
 
-async function generateStory() {
-    const title = document.getElementById('story-title').value.trim() || 'Моя история';
-    const stepInputs = document.querySelectorAll('#story-steps .step-input');
-    const steps = Array.from(stepInputs).map(input => input.value.trim()).filter(s => s.length > 0);
+    const loading=document.getElementById('story-loading');
+    const loadText=document.getElementById('story-loading-text');
+    const progress=document.getElementById('story-progress');
+    const results=document.getElementById('story-results');
 
-    if (steps.length === 0) {
-        alert('Заполните хотя бы один шаг истории!');
-        return;
+    loading.classList.add('show');results.innerHTML='';
+
+    if(withImages && aiEnabled){
+        loadText.textContent='Генерация иллюстраций (0/'+steps.length+')...';
+        progress.style.width='5%';
+    } else {
+        loadText.textContent='Создаём промпты...';
+        progress.style.width='50%';
     }
 
-    const loading = document.getElementById('story-loading');
-    const results = document.getElementById('story-results');
-    loading.classList.add('show');
-    results.innerHTML = '';
-
-    await new Promise(r => setTimeout(r, 500));
-
-    let storySteps;
-
-    try {
-        const res = await fetch('/api/generate/story', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: title, steps: steps, style: selectedStoryStyle })
+    try{
+        const res=await fetch('/api/generate/story',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({title:title,steps:steps,style:selectedStoryStyle,withImages:withImages})
         });
-        const data = await res.json();
-        storySteps = data.steps;
-    } catch(e) {
-        console.log('Оффлайн генерация истории');
-        const suffix = offlineStyleSuffix[selectedStoryStyle] || offlineStyleSuffix.cartoon;
-        const negative = offlineNegative[selectedStoryStyle] || offlineNegative.cartoon;
+        const data=await res.json();
+        progress.style.width='100%';
+        setTimeout(()=>{loading.classList.remove('show')},300);
 
-        storySteps = steps.map((step, i) => ({
-            step: i + 1,
-            text: step,
-            prompt: 'Illustration for social story step ' + (i + 1) + ': "' + step + '", clear scene, easy to understand, showing social situation, sequential illustration, consistent style' + suffix,
-            negative_prompt: negative
-        }));
+        if(data.error){
+            results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';
+            return;
+        }
+
+        let html='<h3>📖 '+data.title+' ('+data.steps.length+' шагов)</h3>';
+        const hasImages=data.steps.some(s=>s.imageUrl);
+        if(hasImages){
+            html+='<div class="notice success">✅ Иллюстрации готовы!</div>';
+        } else {
+            html+='<div class="notice info">📝 Промпты готовы. Генерируйте картинки в одном стиле для единообразия.</div>';
+        }
+
+        data.steps.forEach((s,i)=>{
+            const pid='story-p-'+i, nid='story-n-'+i;
+            html+='<div class="single-result" style="margin-top:12px"><div class="result-header"><div class="step-num">'+s.step+'</div><div><div class="result-title">'+s.text+'</div></div></div>';
+            if(s.imageUrl){
+                html+='<img class="result-image" src="'+s.imageUrl+'" alt="step '+s.step+'">';
+                html+='<div style="text-align:center"><a class="dl-btn" href="'+s.imageUrl+'" download="step_'+s.step+'.png">⬇️ Скачать</a></div>';
+            }
+            if(s.imageError) html+='<div class="notice error" style="padding:8px;font-size:12px">❌ '+s.imageError+'</div>';
+            html+='<details class="prompt-box"><summary>📝 Промпт</summary>';
+            html+='<div class="prompt-text" id="'+pid+'">'+s.prompt+'</div>';
+            html+='<div class="neg-prompt-text" id="'+nid+'">Negative: '+s.negative_prompt+'</div>';
+            html+='<button class="copy-btn" onclick="copyPrompt(this,document.getElementById(\''+pid+'\').textContent)">📋 Копировать</button>';
+            html+='</details></div>';
+        });
+
+        results.innerHTML=html;
+
+    }catch(e){
+        loading.classList.remove('show');
+        results.innerHTML='<div class="notice error">❌ Ошибка: '+e.message+'</div>';
     }
-
-    loading.classList.remove('show');
-
-    let html = '<h3>📖 ' + title + ' (' + storySteps.length + ' шагов)</h3>';
-    html += '<div class="notice success">✅ Промпты для каждого шага готовы! Генерируйте картинки в одном стиле для единообразия.</div>';
-
-    storySteps.forEach((s, i) => {
-        const promptId = 'story-prompt-' + i;
-        const negId = 'story-neg-' + i;
-        html += '<div class="single-result" style="margin-top:12px">' +
-            '<div class="result-header">' +
-            '<div class="step-num">' + s.step + '</div>' +
-            '<div><div class="result-title">' + s.text + '</div></div></div>' +
-            '<div class="prompt-text" id="' + promptId + '">' + s.prompt + '</div>' +
-            '<div class="neg-prompt-text" id="' + negId + '">Negative: ' + s.negative_prompt + '</div>' +
-            '<button class="copy-btn" onclick="copyPrompt(this, document.getElementById(\'' + promptId + '\').textContent)">📋 Копировать промпт</button> ' +
-            '<button class="copy-btn" onclick="copyPrompt(this, document.getElementById(\'' + negId + '\').textContent)">📋 Копировать negative</button>' +
-            '</div>';
-    });
-
-    results.innerHTML = html;
 }
 
 // ====== ГЕНЕРАЦИЯ УСПОКАИВАЮЩЕЙ ВИЗУАЛИЗАЦИИ ======
+async function generateCalming(withImage){
+    const custom=document.getElementById('calming-custom').value.trim();
+    if(!selectedScene && !custom){alert('Выберите сцену или опишите свою!');return}
 
-async function generateCalming() {
-    const customText = document.getElementById('calming-custom').value.trim();
+    const loading=document.getElementById('calming-loading');
+    const results=document.getElementById('calming-results');
+    loading.classList.add('show');results.innerHTML='';
 
-    if (!selectedScene && !customText) {
-        alert('Выберите готовую сцену или опишите свою!');
-        return;
-    }
-
-    const loading = document.getElementById('calming-loading');
-    const results = document.getElementById('calming-results');
-    loading.classList.add('show');
-    results.innerHTML = '';
-
-    await new Promise(r => setTimeout(r, 400));
-
-    let result;
-
-    try {
-        const res = await fetch('/api/generate/calming', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                scene: selectedScene,
-                customDescription: customText,
-                colorPalette: selectedPalette
-            })
+    try{
+        const res=await fetch('/api/generate/calming',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({scene:selectedScene,customDescription:custom,colorPalette:selectedPalette,withImage:withImage})
         });
-        result = await res.json();
-    } catch(e) {
-        console.log('Оффлайн генерация успокаивающей визуализации');
-        const paletteSuffix = offlinePaletteSuffix[selectedPalette] || offlinePaletteSuffix.muted;
-        const negative = 'fast movement, jarring, sudden changes, flashing, strobing, chaotic, scary, violent, nsfw, text, watermark';
+        const data=await res.json();
+        loading.classList.remove('show');
 
-        let prompt, name, emoji;
-
-        if (selectedScene && offlineCalmingPrompts[selectedScene]) {
-            prompt = offlineCalmingPrompts[selectedScene];
-            const sceneNames = {
-                jellyfish:'Медузы в океане',rain:'Дождь по стеклу',aurora:'Северное сияние',
-                clouds:'Плывущие облака',fireplace:'Камин',waves:'Морские волны',
-                snowfall:'Снегопад',garden:'Сад с бабочками',underwater:'Подводный мир',lava_lamp:'Лава-лампа'
-            };
-            const sceneEmojis = {
-                jellyfish:'🪼',rain:'🌧️',aurora:'🌌',clouds:'☁️',fireplace:'🔥',
-                waves:'🌊',snowfall:'❄️',garden:'🦋',underwater:'🐠',lava_lamp:'🫧'
-            };
-            name = sceneNames[selectedScene] || 'Сцена';
-            emoji = sceneEmojis[selectedScene] || '🎨';
-        } else {
-            prompt = customText + ', calming, peaceful, soothing, gentle colors, relaxing atmosphere';
-            name = 'Своя сцена';
-            emoji = '🎨';
+        if(data.error){
+            results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';
+            return;
         }
 
-        result = {
-            success: true,
-            scene: name,
-            emoji: emoji,
-            prompt: prompt + paletteSuffix,
-            negative_prompt: negative
-        };
+        const pNames={muted:'Приглушённая',pastel:'Пастельная',warm:'Тёплая',cool:'Холодная'};
+
+        let html=renderSingleResult({
+            emoji:data.emoji,
+            title:data.scene,
+            subtitle:'Палитра: '+(pNames[selectedPalette]||selectedPalette),
+            prompt:data.prompt,
+            negative_prompt:data.negative_prompt,
+            imageUrl:data.imageUrl,
+            imageError:data.imageError
+        },'calming');
+
+        html+='<div class="notice info" style="margin-top:12px">💡 Для видео: используйте этот промпт в <a href="https://lumalabs.ai/dream-machine" target="_blank">Luma</a>, <a href="https://pika.art" target="_blank">Pika</a> или <a href="https://runwayml.com" target="_blank">Runway</a></div>';
+
+        results.innerHTML=html;
+
+    }catch(e){
+        loading.classList.remove('show');
+        results.innerHTML='<div class="notice error">❌ Ошибка: '+e.message+'</div>';
     }
-
-    loading.classList.remove('show');
-
-    const paletteNames = { muted: 'Приглушённая', pastel: 'Пастельная', warm: 'Тёплая', cool: 'Холодная' };
-
-    const html = '<div class="single-result">' +
-        '<div class="result-header">' +
-        '<div class="result-emoji">' + (result.emoji || '🎨') + '</div>' +
-        '<div><div class="result-title">' + result.scene + '</div>' +
-        '<div class="result-subtitle">Палитра: ' + (paletteNames[selectedPalette] || selectedPalette) + '</div></div></div>' +
-        '<div class="prompt-text" id="calming-prompt-text">' + result.prompt + '</div>' +
-        '<div class="neg-prompt-text" id="calming-neg-text">Negative: ' + result.negative_prompt + '</div>' +
-        '<button class="copy-btn" onclick="copyPrompt(this, document.getElementById(\'calming-prompt-text\').textContent)">📋 Копировать промпт</button> ' +
-                '<button class="copy-btn" onclick="copyPrompt(this, document.getElementById(\'calming-prompt-text\').textContent)">📋 Копировать промпт</button> ' +
-        '<button class="copy-btn" onclick="copyPrompt(this, document.getElementById(\'calming-neg-text\').textContent)">📋 Копировать negative</button>' +
-        '<div class="notice info" style="margin-top:12px">💡 <b>Совет для видео:</b> Этот же промпт можно использовать в <a href="https://lumalabs.ai/dream-machine" target="_blank">Luma Dream Machine</a>, <a href="https://pika.art" target="_blank">Pika.art</a> или <a href="https://runwayml.com" target="_blank">Runway</a> для создания успокаивающего видео.</div>' +
-        '</div>';
-
-    results.innerHTML = html;
 }
 
-// ====== ЗАПУСК ПРИЛОЖЕНИЯ ======
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('🧩 NeuroVisual Helper загружается...');
+// ====== ЗАПУСК ======
+document.addEventListener('DOMContentLoaded',function(){
+    console.log('🧩 NeuroVisual Helper v2.0 загружается...');
     loadData();
-    console.log('✅ NeuroVisual Helper готов к работе!');
 });
-
 </script>
 </body>
 </html>
