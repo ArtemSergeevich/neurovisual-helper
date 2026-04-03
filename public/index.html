@@ -49,12 +49,17 @@ textarea{min-height:80px}
 .prompt-box{background:#f7fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-top:10px;text-align:left}
 .prompt-box summary{cursor:pointer;font-size:13px;color:#667eea;font-weight:600}
 .prompt-text{font-family:'Courier New',monospace;font-size:12px;color:#4a5568;background:#fff;padding:10px;border-radius:8px;border:1px solid #e2e8f0;word-break:break-word;line-height:1.5;margin-top:8px}
-.neg-prompt-text{font-family:'Courier New',monospace;font-size:11px;color:#a0aec0;background:#fff5f5;padding:8px;border-radius:6px;border:1px solid #fed7d7;word-break:break-word;line-height:1.4;margin-top:6px}
 .copy-btn{margin-top:6px;padding:7px 14px;background:#667eea;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;transition:all .2s;margin-right:4px}
 .copy-btn:hover{background:#5a67d8}
 .copy-btn.copied{background:#48bb78}
 .dl-btn{margin-top:6px;padding:7px 14px;background:#48bb78;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;text-decoration:none;display:inline-block}
 .dl-btn:hover{background:#38a169}
+.export-panel{display:flex;gap:10px;margin-top:15px;padding:15px;background:linear-gradient(135deg,#f0f4ff,#faf0ff);border:2px solid #667eea;border-radius:12px;flex-wrap:wrap;align-items:center}
+.export-btn{padding:10px 20px;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.export-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.export-btn.pdf{background:linear-gradient(135deg,#667eea,#764ba2)}
+.export-btn.imgs{background:linear-gradient(135deg,#48bb78,#38a169)}
+.export-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .grid-select{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:12px 0}
 .grid-item{padding:18px 12px;text-align:center;border:2px solid #e2e8f0;border-radius:12px;cursor:pointer;transition:all .2s;background:#fff}
 .grid-item:hover{border-color:#667eea;transform:translateY(-2px)}
@@ -99,7 +104,7 @@ textarea{min-height:80px}
 .progress-bar{width:100%;height:6px;background:#e2e8f0;border-radius:3px;margin-top:10px;overflow:hidden}
 .progress-fill{height:100%;background:linear-gradient(90deg,#667eea,#764ba2);border-radius:3px;transition:width .3s;width:0}
 .footer{text-align:center;padding:30px 20px;color:#a0aec0;font-size:12px;line-height:1.6}
-@media(max-width:768px){.header h1{font-size:21px}.container{padding:12px}.section{padding:18px}.cards-grid{grid-template-columns:repeat(2,1fr);gap:10px}.grid-select{grid-template-columns:repeat(2,1fr)}.tab{padding:8px 11px;font-size:12px}.btn-row{flex-direction:column}}
+@media(max-width:768px){.header h1{font-size:21px}.container{padding:12px}.section{padding:18px}.cards-grid{grid-template-columns:repeat(2,1fr);gap:10px}.grid-select{grid-template-columns:repeat(2,1fr)}.tab{padding:8px 11px;font-size:12px}.btn-row{flex-direction:column}.export-panel{flex-direction:column}}
 @media(max-width:480px){.cards-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -112,7 +117,7 @@ textarea{min-height:80px}
 </div>
 
 <div class="tabs">
-    <div class="tab active" onclick="switchTab('pecs')">🃏 PECS-карточки</div>
+    <div class="tab active" onclick="switchTab('pecs')">🃏 PECS</div>
     <div class="tab" onclick="switchTab('emotions')">😊 Эмоции</div>
     <div class="tab" onclick="switchTab('stories')">📖 Истории</div>
     <div class="tab" onclick="switchTab('calming')">🌊 Успокоение</div>
@@ -123,7 +128,7 @@ textarea{min-height:80px}
 <!-- PECS -->
 <div class="section active" id="section-pecs">
     <h2>🃏 Генератор PECS-карточек</h2>
-    <p class="desc">Введите слова для карточек. С включённым AI — картинки генерируются автоматически!</p>
+    <p class="desc">Выберите слова → получите карточки с картинками для общения</p>
     <label>Введите слова (каждое с новой строки или через запятую):</label>
     <textarea id="pecs-input" placeholder="хочу пить&#10;хочу есть&#10;туалет&#10;играть"></textarea>
     <label>Или выберите готовые:</label>
@@ -136,19 +141,12 @@ textarea{min-height:80px}
     </div>
     <div class="loading" id="pecs-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096" id="pecs-loading-text">Создаём...</p><div class="progress-bar"><div class="progress-fill" id="pecs-progress"></div></div></div>
     <div class="result-area" id="pecs-results"></div>
-    <div class="how-to">
-        <h4>📋 Два способа использования</h4>
-        <ol>
-            <li><b>С AI (зелёная кнопка):</b> Картинки генерируются прямо здесь автоматически!</li>
-            <li><b>Только промпты (фиолетовая кнопка):</b> Скопируйте промпт → вставьте в <a href="https://ideogram.ai" target="_blank">Ideogram</a> или <a href="https://www.bing.com/images/create" target="_blank">Bing Creator</a></li>
-        </ol>
-    </div>
 </div>
 
 <!-- ЭМОЦИИ -->
 <div class="section" id="section-emotions">
     <h2>😊 Тренажёр эмоций</h2>
-    <p class="desc">Выберите эмоцию и интенсивность — получите картинку лица с нужным выражением.</p>
+    <p class="desc">Выберите эмоцию и интенсивность → получите картинку выражения лица</p>
     <label>Выберите эмоцию:</label>
     <div class="grid-select" id="emotions-grid"></div>
     <label>Интенсивность:</label>
@@ -160,16 +158,16 @@ textarea{min-height:80px}
     <div class="style-options" id="emotion-styles"></div>
     <div class="btn-row">
         <button class="gen-btn" onclick="generateEmotion(false)">📝 Только промпт</button>
-        <button class="gen-btn secondary" id="emotion-ai-btn" onclick="generateEmotion(true)" disabled>🤖 Сгенерировать картинку</button>
+        <button class="gen-btn secondary" id="emotion-ai-btn" onclick="generateEmotion(true)" disabled>🤖 Сгенерировать</button>
     </div>
-    <div class="loading" id="emotion-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096">Генерация эмоции...</p></div>
+    <div class="loading" id="emotion-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096">Генерация...</p></div>
     <div class="result-area" id="emotion-results"></div>
 </div>
 
 <!-- ИСТОРИИ -->
 <div class="section" id="section-stories">
     <h2>📖 Социальные истории</h2>
-    <p class="desc">Создайте последовательность событий с иллюстрациями.</p>
+    <p class="desc">Создайте последовательность событий с иллюстрациями</p>
     <label>Название:</label>
     <input type="text" id="story-title" placeholder="Например: Поход к врачу">
     <label>Шаги:</label>
@@ -185,14 +183,14 @@ textarea{min-height:80px}
         <button class="gen-btn" onclick="generateStory(false)">📝 Только промпты</button>
         <button class="gen-btn secondary" id="story-ai-btn" onclick="generateStory(true)" disabled>🤖 С картинками</button>
     </div>
-    <div class="loading" id="story-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096" id="story-loading-text">Создаём историю...</p><div class="progress-bar"><div class="progress-fill" id="story-progress"></div></div></div>
+    <div class="loading" id="story-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096" id="story-loading-text">Создаём...</p><div class="progress-bar"><div class="progress-fill" id="story-progress"></div></div></div>
     <div class="result-area" id="story-results"></div>
 </div>
 
 <!-- УСПОКОЕНИЕ -->
 <div class="section" id="section-calming">
     <h2>🌊 Успокаивающие визуализации</h2>
-    <p class="desc">Выберите сцену — получите спокойное изображение.</p>
+    <p class="desc">Выберите сцену → получите спокойное изображение</p>
     <label>Выберите сцену:</label>
     <div class="grid-select" id="calming-grid"></div>
     <label>Или опишите свою:</label>
@@ -206,23 +204,27 @@ textarea{min-height:80px}
     </div>
     <div class="btn-row">
         <button class="gen-btn" onclick="generateCalming(false)">📝 Только промпт</button>
-        <button class="gen-btn secondary" id="calming-ai-btn" onclick="generateCalming(true)" disabled>🤖 Сгенерировать картинку</button>
+        <button class="gen-btn secondary" id="calming-ai-btn" onclick="generateCalming(true)" disabled>🤖 Сгенерировать</button>
     </div>
-    <div class="loading" id="calming-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096">Создаём визуализацию...</p></div>
+    <div class="loading" id="calming-loading"><div class="spinner"></div><p style="margin-top:10px;color:#718096">Создаём...</p></div>
     <div class="result-area" id="calming-results"></div>
 </div>
 
 <div class="notice warn" style="margin-top:20px">🧩 Инструмент для поддержки — <b>не заменяет</b> специалистов.</div>
 </div>
 
-<div class="footer">🧩 NeuroVisual Helper v2.0 — Сделано с ❤️ для особенных людей</div>
+<div class="footer">🧩 NeuroVisual Helper v6.1 — Сделано с ❤️ для особенных людей</div>
 
 <script>
-// ====== ПЕРЕМЕННЫЕ ======
-let selectedPecsStyle='minimalist', selectedEmotionStyle='cartoon', selectedStoryStyle='cartoon';
-let selectedEmotion=null, selectedScene=null, selectedPalette='muted', aiEnabled=false;
+let selectedPecsStyle='minimalist',selectedEmotionStyle='cartoon',selectedStoryStyle='cartoon';
+let selectedEmotion=null,selectedScene=null,selectedPalette='muted',aiEnabled=false;
 
-// ====== ВКЛАДКИ ======
+// Хранилище для экспорта
+let lastPecsCards=[];
+let lastStoryData=null;
+let lastEmotionData=null;
+let lastCalmingData=null;
+
 function switchTab(n){
     document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
     document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -231,40 +233,16 @@ function switchTab(n){
     document.querySelectorAll('.tab')[m[n]].classList.add('active');
 }
 
-// ====== ЗАГРУЗКА ======
 async function loadData(){
     try{
-        // Проверяем AI статус
-        const health = await fetch('/api/health').then(r=>r.json());
-        aiEnabled = health.aiEnabled;
-        const badge = document.getElementById('ai-status');
-        if(aiEnabled){
-            badge.className='ai-badge on';
-            badge.textContent='🤖 AI генерация включена';
-            document.querySelectorAll('.gen-btn.secondary').forEach(b=>b.disabled=false);
-        } else {
-            badge.className='ai-badge off';
-            badge.textContent='📝 Режим промптов (AI не подключён)';
-        }
-
-        const [templates,stylesList,emotionsList,scenes] = await Promise.all([
-            fetch('/api/templates').then(r=>r.json()),
-            fetch('/api/styles').then(r=>r.json()),
-            fetch('/api/emotions').then(r=>r.json()),
-            fetch('/api/calming-scenes').then(r=>r.json())
-        ]);
-        renderQuickBtns(templates);
-        renderStyleBtns('pecs-styles',stylesList,'pecs','minimalist');
-        renderStyleBtns('emotion-styles',stylesList,'emotion','cartoon');
-        renderStyleBtns('story-styles',stylesList,'story','cartoon');
-        renderEmotionGrid(emotionsList);
-        renderSceneGrid(scenes);
-    }catch(e){
-        console.warn('Оффлайн',e);
-        document.getElementById('ai-status').className='ai-badge off';
-        document.getElementById('ai-status').textContent='⚠️ Сервер недоступен';
-        loadOffline();
-    }
+        const health=await fetch('/api/health').then(r=>r.json());
+        aiEnabled=health.aiEnabled;
+        const badge=document.getElementById('ai-status');
+        if(aiEnabled){badge.className='ai-badge on';badge.textContent='🤖 AI: '+( health.provider||'включён');document.querySelectorAll('.gen-btn.secondary').forEach(b=>b.disabled=false)}
+        else{badge.className='ai-badge off';badge.textContent='📝 Режим промптов'}
+        const[templates,stylesList,emotionsList,scenes]=await Promise.all([fetch('/api/templates').then(r=>r.json()),fetch('/api/styles').then(r=>r.json()),fetch('/api/emotions').then(r=>r.json()),fetch('/api/calming-scenes').then(r=>r.json())]);
+        renderQuickBtns(templates);renderStyleBtns('pecs-styles',stylesList,'pecs','minimalist');renderStyleBtns('emotion-styles',stylesList,'emotion','cartoon');renderStyleBtns('story-styles',stylesList,'story','cartoon');renderEmotionGrid(emotionsList);renderSceneGrid(scenes);
+    }catch(e){console.warn('Оффлайн',e);document.getElementById('ai-status').className='ai-badge off';document.getElementById('ai-status').textContent='⚠️ Сервер недоступен';loadOffline()}
 }
 
 function loadOffline(){
@@ -275,40 +253,26 @@ function loadOffline(){
     renderQuickBtns(t);renderStyleBtns('pecs-styles',s,'pecs','minimalist');renderStyleBtns('emotion-styles',s,'emotion','cartoon');renderStyleBtns('story-styles',s,'story','cartoon');renderEmotionGrid(em);renderSceneGrid(sc);
 }
 
-// ====== РЕНДЕР ======
-function renderQuickBtns(list){
-    document.getElementById('pecs-quick-btns').innerHTML=list.map(t=>'<div class="quick-btn" onclick="addQuickWord(\''+t.text+'\')">'+t.emoji+' '+t.text+'</div>').join('');
-}
-function renderStyleBtns(id,list,mode,def){
-    document.getElementById(id).innerHTML=list.map(s=>'<div class="style-btn'+(s.id===def?' selected':'')+'" data-value="'+s.id+'" onclick="selectStyle(this,\''+mode+'\')">'+s.name+'</div>').join('');
-}
-function renderEmotionGrid(list){
-    document.getElementById('emotions-grid').innerHTML=list.map(e=>'<div class="grid-item" data-value="'+e.id+'" onclick="selectEmotion(this)"><div class="grid-item-emoji">'+e.emoji+'</div><div class="grid-item-name">'+e.name+'</div></div>').join('');
-}
-function renderSceneGrid(list){
-    document.getElementById('calming-grid').innerHTML=list.map(s=>'<div class="grid-item" data-value="'+s.id+'" onclick="selectSceneItem(this)"><div class="grid-item-emoji">'+s.emoji+'</div><div class="grid-item-name">'+s.name+'</div></div>').join('');
-}
+function renderQuickBtns(list){document.getElementById('pecs-quick-btns').innerHTML=list.map(t=>'<div class="quick-btn" onclick="addQuickWord(\''+t.text+'\')">'+t.emoji+' '+t.text+'</div>').join('')}
+function renderStyleBtns(id,list,mode,def){document.getElementById(id).innerHTML=list.map(s=>'<div class="style-btn'+(s.id===def?' selected':'')+'" data-value="'+s.id+'" onclick="selectStyle(this,\''+mode+'\')">'+s.name+'</div>').join('')}
+function renderEmotionGrid(list){document.getElementById('emotions-grid').innerHTML=list.map(e=>'<div class="grid-item" data-value="'+e.id+'" onclick="selectEmotion(this)"><div class="grid-item-emoji">'+e.emoji+'</div><div class="grid-item-name">'+e.name+'</div></div>').join('')}
+function renderSceneGrid(list){document.getElementById('calming-grid').innerHTML=list.map(s=>'<div class="grid-item" data-value="'+s.id+'" onclick="selectSceneItem(this)"><div class="grid-item-emoji">'+s.emoji+'</div><div class="grid-item-name">'+s.name+'</div></div>').join('')}
 
-// ====== ВЫБОР ======
 function addQuickWord(w){const i=document.getElementById('pecs-input');const c=i.value.trim();if(c){const ws=c.split('\n').map(x=>x.trim().toLowerCase());if(!ws.includes(w.toLowerCase()))i.value=c+'\n'+w}else i.value=w}
-function selectStyle(b,m){b.parentElement.querySelectorAll('.style-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');const v=b.getAttribute('data-value');if(m==='pecs')selectedPecsStyle=v;else if(m==='emotion')selectedEmotionStyle=v;else if(m==='story')selectedStoryStyle=v}
-function selectEmotion(el){document.querySelectorAll('#emotions-grid .grid-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');selectedEmotion=el.getAttribute('data-value')}
-function selectSceneItem(el){document.querySelectorAll('#calming-grid .grid-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');selectedScene=el.getAttribute('data-value');document.getElementById('calming-custom').value=''}
-function selectPalette(b){document.querySelectorAll('#calming-palettes .style-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');selectedPalette=b.getAttribute('data-value')}
+function selectStyle(b,m){b.parentElement.querySelectorAll('.style-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');const v=b.dataset.value;if(m==='pecs')selectedPecsStyle=v;else if(m==='emotion')selectedEmotionStyle=v;else if(m==='story')selectedStoryStyle=v}
+function selectEmotion(el){document.querySelectorAll('#emotions-grid .grid-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');selectedEmotion=el.dataset.value}
+function selectSceneItem(el){document.querySelectorAll('#calming-grid .grid-item').forEach(x=>x.classList.remove('selected'));el.classList.add('selected');selectedScene=el.dataset.value;document.getElementById('calming-custom').value=''}
+function selectPalette(b){document.querySelectorAll('#calming-palettes .style-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');selectedPalette=b.dataset.value}
 
-// ====== КОПИРОВАНИЕ ======
-function copyPrompt(btn,text){
-    navigator.clipboard.writeText(text).then(()=>{
-        const o=btn.textContent;btn.textContent='✅ Скопировано!';btn.classList.add('copied');
-        setTimeout(()=>{btn.textContent=o;btn.classList.remove('copied')},2000);
-    }).catch(()=>{
+function copyText(btn,id){
+    const text=document.getElementById(id).textContent;
+    navigator.clipboard.writeText(text).catch(()=>{
         const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
-        const o=btn.textContent;btn.textContent='✅ Скопировано!';btn.classList.add('copied');
-        setTimeout(()=>{btn.textContent=o;btn.classList.remove('copied')},2000);
     });
+    const o=btn.textContent;btn.textContent='✅ Скопировано!';btn.classList.add('copied');
+    setTimeout(()=>{btn.textContent=o;btn.classList.remove('copied')},2000);
 }
 
-// ====== ШАГИ ИСТОРИИ ======
 function addStep(){
     const c=document.getElementById('story-steps');const n=c.children.length+1;
     const d=document.createElement('div');d.className='story-step';
@@ -320,51 +284,95 @@ function removeStep(btn){
     if(c.children.length>1){btn.parentElement.remove();Array.from(c.children).forEach((s,i)=>{s.querySelector('.step-num').textContent=i+1})}
 }
 
-// ====== РЕНДЕР КАРТОЧКИ ======
-function renderCard(card, index, prefix){
-    const pid=prefix+'-prompt-'+index;
-    const nid=prefix+'-neg-'+index;
-    let imgHtml;
-    if(card.imageUrl){
-        imgHtml='<div class="card-icon"><img src="'+card.imageUrl+'" alt="'+card.text+'" loading="lazy"></div>';
-    } else {
-        imgHtml='<div class="card-icon">'+(card.emoji||'🖼️')+'</div>';
-    }
-    let html='<div class="card">'+imgHtml+'<div class="card-label">'+card.text+'</div>';
-    if(card.imageUrl){
-        html+='<a class="dl-btn" href="'+card.imageUrl+'" download="'+card.text+'.png">⬇️ Скачать</a>';
-    }
-    if(card.imageError){
-        html+='<div class="notice error" style="margin-top:8px;padding:8px;font-size:11px">❌ '+card.imageError+'</div>';
-    }
-    html+='<details class="prompt-box"><summary>📝 Показать промпт</summary>';
-    html+='<div class="prompt-text" id="'+pid+'">'+card.prompt+'</div>';
-    html+='<div class="neg-prompt-text" id="'+nid+'">Negative: '+card.negative_prompt+'</div>';
-    html+='<button class="copy-btn" onclick="copyPrompt(this,document.getElementById(\''+pid+'\').textContent)">📋 Копировать</button>';
-    html+='</details></div>';
+// ====== ЭКСПОРТ ======
+function buildExportPanel(cards, title, type){
+    if(!cards||!cards.length) return '';
+    const hasImages=cards.some(c=>c.imageUrl);
+    let html='<div class="export-panel">';
+    html+='<span style="font-size:20px">📄</span>';
+    html+='<span style="font-weight:600;color:#4a5568;font-size:14px">Экспорт ('+cards.length+' шт.):</span>';
+    html+='<button class="export-btn pdf" onclick="doExportPDF(\''+type+'\')">📄 Скачать PDF</button>';
+    if(hasImages) html+='<button class="export-btn imgs" onclick="doExportImages(\''+type+'\')">🖼️ Скачать картинки</button>';
+    html+='</div>';
     return html;
 }
 
-// ====== РЕНДЕР ОДИНОЧНОГО РЕЗУЛЬТАТА ======
-function renderSingleResult(data, prefix){
-    let html='<div class="single-result"><div class="result-header">';
-    html+='<div class="result-emoji">'+(data.emoji||'🎨')+'</div>';
-    html+='<div><div class="result-title">'+(data.title||data.emotion||data.scene||'')+'</div>';
-    if(data.subtitle) html+='<div class="result-subtitle">'+data.subtitle+'</div>';
-    html+='</div></div>';
-    if(data.imageUrl){
-        html+='<img class="result-image" src="'+data.imageUrl+'" alt="result">';
-        html+='<div style="text-align:center"><a class="dl-btn" href="'+data.imageUrl+'" download="result.png">⬇️ Скачать картинку</a></div>';
+async function doExportPDF(type){
+    let cards,title;
+    if(type==='pecs'){cards=lastPecsCards;title='PECS Карточки'}
+    else if(type==='story'){cards=lastStoryData?lastStoryData.steps:[];title=lastStoryData?lastStoryData.title:'История'}
+    else if(type==='emotion'){cards=lastEmotionData?[lastEmotionData]:[];title='Эмоция'}
+    else if(type==='calming'){cards=lastCalmingData?[lastCalmingData]:[];title='Успокоение'}
+
+    if(!cards||!cards.length){alert('Нет карточек!');return}
+
+    // Находим кнопку
+    const btns=document.querySelectorAll('.export-btn.pdf');
+    btns.forEach(b=>{b.textContent='⏳ Создаём PDF...';b.disabled=true});
+
+    try{
+        const res=await fetch('/api/export/pdf',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({cards,title,type})
+        });
+
+        if(!res.ok){
+            const err=await res.json();
+            throw new Error(err.error||'Ошибка сервера');
+        }
+
+        const blob=await res.blob();
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;
+        a.download=title.replace(/\s+/g,'_')+'_'+Date.now()+'.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        btns.forEach(b=>{b.textContent='✅ Скачано!';setTimeout(()=>{b.textContent='📄 Скачать PDF';b.disabled=false},2000)});
+    }catch(err){
+        alert('Ошибка PDF: '+err.message);
+        btns.forEach(b=>{b.textContent='📄 Скачать PDF';b.disabled=false});
     }
-    if(data.imageError){
-        html+='<div class="notice error">❌ Ошибка генерации: '+data.imageError+'</div>';
-    }
-    const pid=prefix+'-prompt-main';
-    const nid=prefix+'-neg-main';
-    html+='<div class="prompt-text" id="'+pid+'" style="margin-top:12px">'+data.prompt+'</div>';
-    html+='<div class="neg-prompt-text" id="'+nid+'">Negative: '+data.negative_prompt+'</div>';
-    html+='<button class="copy-btn" onclick="copyPrompt(this,document.getElementById(\''+pid+'\').textContent)">📋 Копировать промпт</button>';
-    html+='</div>';
+}
+
+function doExportImages(type){
+    let cards=[];
+    if(type==='pecs') cards=lastPecsCards;
+    else if(type==='story') cards=lastStoryData?lastStoryData.steps:[];
+    else if(type==='emotion') cards=lastEmotionData?[lastEmotionData]:[];
+    else if(type==='calming') cards=lastCalmingData?[lastCalmingData]:[];
+
+    let count=0;
+    cards.forEach((card,i)=>{
+        if(card.imageUrl){
+            setTimeout(()=>{
+                const a=document.createElement('a');
+                a.href=card.imageUrl;
+                a.download=(card.text||card.scene||card.emotion||'card')+'_'+i+'.jpg';
+                a.click();
+            },i*500);
+            count++;
+        }
+    });
+    if(count===0) alert('Нет картинок для скачивания!');
+}
+
+// ====== РЕНДЕР КАРТОЧКИ ======
+function renderCard(card,i,prefix){
+    const pid=prefix+'-p-'+i;
+    let imgHtml;
+    if(card.imageUrl) imgHtml='<div class="card-icon"><img src="'+card.imageUrl+'" alt="'+card.text+'" loading="lazy"></div>';
+    else imgHtml='<div class="card-icon">'+(card.emoji||'🖼️')+'</div>';
+
+    let html='<div class="card">'+imgHtml+'<div class="card-label">'+card.text+'</div>';
+    if(card.imageUrl) html+='<a class="dl-btn" href="'+card.imageUrl+'" download="'+card.text+'.png">⬇️ Скачать</a>';
+    if(card.imageError) html+='<div class="notice error" style="margin-top:8px;padding:8px;font-size:11px">❌ '+card.imageError+'</div>';
+    html+='<details class="prompt-box"><summary>📝 Показать промпт</summary>';
+    html+='<div class="prompt-text" id="'+pid+'">'+card.prompt+'</div>';
+    html+='<button class="copy-btn" onclick="copyText(this,\''+pid+'\')">📋 Копировать</button>';
+    html+='</details></div>';
     return html;
 }
 
@@ -381,46 +389,32 @@ async function generatePECS(withImages){
     const progress=document.getElementById('pecs-progress');
     const results=document.getElementById('pecs-results');
 
-    loading.classList.add('show');
-    results.innerHTML='';
-
-    if(withImages && aiEnabled){
-        loadText.textContent='Генерация картинок (0/'+items.length+')... Это может занять 1-2 минуты';
-        progress.style.width='5%';
-    } else {
-        loadText.textContent='Создаём промпты...';
-        progress.style.width='50%';
-    }
+    loading.classList.add('show');results.innerHTML='';
+    if(withImages&&aiEnabled){loadText.textContent='Генерация картинок ('+items.length+' шт.)... ~30 сек на каждую';progress.style.width='5%'}
+    else{loadText.textContent='Создаём промпты...';progress.style.width='50%'}
 
     try{
-        const res=await fetch('/api/generate/pecs',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({items:items,style:selectedPecsStyle,withImages:withImages})
-        });
+        const res=await fetch('/api/generate/pecs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({items,style:selectedPecsStyle,withImages})});
         const data=await res.json();
-
-        if(data.error){
-            loading.classList.remove('show');
-            results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';
-            return;
-        }
-
         progress.style.width='100%';
         setTimeout(()=>{loading.classList.remove('show')},300);
 
-        let html='<h3>🃏 Ваши карточки ('+data.cards.length+' шт.)</h3>';
+        if(data.error){results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';return}
+
+        lastPecsCards=data.cards;
         const hasImages=data.cards.some(c=>c.imageUrl);
-        if(hasImages){
-            html+='<div class="notice success">✅ Картинки сгенерированы! Нажмите «Скачать» под каждой.</div>';
-        } else {
-            html+='<div class="notice info">📝 Промпты готовы! Нажмите «Показать промпт» → «Копировать» → вставьте в генератор картинок.</div>';
-        }
+
+        let html='<h3>🃏 Ваши карточки ('+data.cards.length+' шт.)</h3>';
+        if(hasImages) html+='<div class="notice success">✅ Картинки сгенерированы!</div>';
+        else html+='<div class="notice info">📝 Промпты готовы! Нажмите «Показать промпт» → «Копировать»</div>';
+
+        // Кнопки экспорта
+        html+=buildExportPanel(data.cards,'PECS Карточки','pecs');
+
         html+='<div class="cards-grid">';
         data.cards.forEach((card,i)=>{html+=renderCard(card,i,'pecs')});
         html+='</div>';
         results.innerHTML=html;
-
     }catch(e){
         loading.classList.remove('show');
         results.innerHTML='<div class="notice error">❌ Ошибка: '+e.message+'</div>';
@@ -430,9 +424,8 @@ async function generatePECS(withImages){
 // ====== ГЕНЕРАЦИЯ ЭМОЦИИ ======
 async function generateEmotion(withImage){
     if(!selectedEmotion){alert('Выберите эмоцию!');return}
-    const slider=document.getElementById('intensity-slider');
     const iMap={'1':'low','2':'medium','3':'high'};
-    const intensity=iMap[slider.value]||'medium';
+    const intensity=iMap[document.getElementById('intensity-slider').value]||'medium';
     const iNames={low:'Слабая',medium:'Средняя',high:'Сильная'};
 
     const loading=document.getElementById('emotion-loading');
@@ -440,29 +433,26 @@ async function generateEmotion(withImage){
     loading.classList.add('show');results.innerHTML='';
 
     try{
-        const res=await fetch('/api/generate/emotion',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({emotion:selectedEmotion,intensity:intensity,style:selectedEmotionStyle,withImage:withImage})
-        });
+        const res=await fetch('/api/generate/emotion',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({emotion:selectedEmotion,intensity,style:selectedEmotionStyle,withImage})});
         const data=await res.json();
         loading.classList.remove('show');
+        if(data.error){results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';return}
 
-        if(data.error){
-            results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';
-            return;
+        lastEmotionData=data;
+        const pid='emo-p-main';
+
+        let html='<div class="single-result"><div class="result-header"><div class="result-emoji">'+data.emoji+'</div><div><div class="result-title">'+data.emotion+'</div><div class="result-subtitle">Интенсивность: '+iNames[intensity]+' | Стиль: '+data.style+'</div></div></div>';
+        if(data.imageUrl){
+            html+='<img class="result-image" src="'+data.imageUrl+'" alt="'+data.emotion+'">';
+            html+='<div style="text-align:center"><a class="dl-btn" href="'+data.imageUrl+'" download="emotion_'+data.emotion+'.png">⬇️ Скачать</a></div>';
         }
+        if(data.imageError) html+='<div class="notice error">❌ '+data.imageError+'</div>';
+        html+='<details class="prompt-box"><summary>📝 Промпт</summary><div class="prompt-text" id="'+pid+'">'+data.prompt+'</div><button class="copy-btn" onclick="copyText(this,\''+pid+'\')">📋 Копировать</button></details>';
+        html+='</div>';
 
-        results.innerHTML=renderSingleResult({
-            emoji:data.emoji,
-            title:data.emotion,
-            subtitle:'Интенсивность: '+iNames[intensity]+' | Стиль: '+data.style,
-            prompt:data.prompt,
-            negative_prompt:data.negative_prompt,
-            imageUrl:data.imageUrl,
-            imageError:data.imageError
-        },'emotion');
-
+        // Экспорт
+        html+=buildExportPanel([data],'Эмоция '+data.emotion,'emotion');
+        results.innerHTML=html;
     }catch(e){
         loading.classList.remove('show');
         results.innerHTML='<div class="notice error">❌ Ошибка: '+e.message+'</div>';
@@ -482,283 +472,82 @@ async function generateStory(withImages){
     const results=document.getElementById('story-results');
 
     loading.classList.add('show');results.innerHTML='';
-
-    if(withImages && aiEnabled){
-        loadText.textContent='Генерация иллюстраций (0/'+steps.length+')...';
-        progress.style.width='5%';
-    } else {
-        loadText.textContent='Создаём промпты...';
-        progress.style.width='50%';
-    }
+    if(withImages&&aiEnabled){loadText.textContent='Генерация иллюстраций ('+steps.length+' шт.)...';progress.style.width='5%'}
+    else{loadText.textContent='Создаём промпты...';progress.style.width='50%'}
 
     try{
-        const res=await fetch('/api/generate/story',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({title:title,steps:steps,style:selectedStoryStyle,withImages:withImages})
-        });
+        const res=await fetch('/api/generate/story',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,steps,style:selectedStoryStyle,withImages})});
         const data=await res.json();
         progress.style.width='100%';
         setTimeout(()=>{loading.classList.remove('show')},300);
+        if(data.error){results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';return}
 
-        if(data.error){
-            results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';
-            return;
-        }
+        lastStoryData=data;
+        const hasImages=data.steps.some(s=>s.imageUrl);
 
         let html='<h3>📖 '+data.title+' ('+data.steps.length+' шагов)</h3>';
-        const hasImages=data.steps.some(s=>s.imageUrl);
-        if(hasImages){
-            html+='<div class="notice success">✅ Иллюстрации готовы!</div>';
-        } else {
-            html+='<div class="notice info">📝 Промпты готовы. Генерируйте картинки в одном стиле для единообразия.</div>';
-        }
+        if(hasImages) html+='<div class="notice success">✅ Иллюстрации готовы!</div>';
+        else html+='<div class="notice info">📝 Промпты готовы</div>';
+
+        // Экспорт
+        html+=buildExportPanel(data.steps,data.title,'story');
 
         data.steps.forEach((s,i)=>{
-            const pid='story-p-'+i, nid='story-n-'+i;
+            const pid='story-p-'+i;
             html+='<div class="single-result" style="margin-top:12px"><div class="result-header"><div class="step-num">'+s.step+'</div><div><div class="result-title">'+s.text+'</div></div></div>';
             if(s.imageUrl){
                 html+='<img class="result-image" src="'+s.imageUrl+'" alt="step '+s.step+'">';
                 html+='<div style="text-align:center"><a class="dl-btn" href="'+s.imageUrl+'" download="step_'+s.step+'.png">⬇️ Скачать</a></div>';
             }
             if(s.imageError) html+='<div class="notice error" style="padding:8px;font-size:12px">❌ '+s.imageError+'</div>';
-            html+='<details class="prompt-box"><summary>📝 Промпт</summary>';
-            html+='<div class="prompt-text" id="'+pid+'">'+s.prompt+'</div>';
-            html+='<div class="neg-prompt-text" id="'+nid+'">Negative: '+s.negative_prompt+'</div>';
-            html+='<button class="copy-btn" onclick="copyPrompt(this,document.getElementById(\''+pid+'\').textContent)">📋 Копировать</button>';
-            html+='</details></div>';
+            html+='<details class="prompt-box"><summary>📝 Промпт</summary><div class="prompt-text" id="'+pid+'">'+s.prompt+'</div><button class="copy-btn" onclick="copyText(this,\''+pid+'\')">📋 Копировать</button></details>';
+            html+='</div>';
         });
-
         results.innerHTML=html;
-
     }catch(e){
         loading.classList.remove('show');
         results.innerHTML='<div class="notice error">❌ Ошибка: '+e.message+'</div>';
     }
 }
 
-// ====== ГЕНЕРАЦИЯ УСПОКАИВАЮЩЕЙ ВИЗУАЛИЗАЦИИ ======
+// ====== ГЕНЕРАЦИЯ УСПОКОЕНИЯ ======
 async function generateCalming(withImage){
     const custom=document.getElementById('calming-custom').value.trim();
-    if(!selectedScene && !custom){alert('Выберите сцену или опишите свою!');return}
+    if(!selectedScene&&!custom){alert('Выберите сцену или опишите свою!');return}
 
     const loading=document.getElementById('calming-loading');
     const results=document.getElementById('calming-results');
     loading.classList.add('show');results.innerHTML='';
 
     try{
-        const res=await fetch('/api/generate/calming',{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({scene:selectedScene,customDescription:custom,colorPalette:selectedPalette,withImage:withImage})
-        });
+        const res=await fetch('/api/generate/calming',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({scene:selectedScene,customDescription:custom,colorPalette:selectedPalette,withImage})});
         const data=await res.json();
         loading.classList.remove('show');
+        if(data.error){results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';return}
 
-        if(data.error){
-            results.innerHTML='<div class="notice error">❌ '+data.error+'</div>';
-            return;
-        }
-
+        lastCalmingData=data;
         const pNames={muted:'Приглушённая',pastel:'Пастельная',warm:'Тёплая',cool:'Холодная'};
+        const pid='calm-p-main';
 
-        let html=renderSingleResult({
-            emoji:data.emoji,
-            title:data.scene,
-            subtitle:'Палитра: '+(pNames[selectedPalette]||selectedPalette),
-            prompt:data.prompt,
-            negative_prompt:data.negative_prompt,
-            imageUrl:data.imageUrl,
-            imageError:data.imageError
-        },'calming');
+        let html='<div class="single-result"><div class="result-header"><div class="result-emoji">'+data.emoji+'</div><div><div class="result-title">'+data.scene+'</div><div class="result-subtitle">Палитра: '+(pNames[selectedPalette]||'')+'</div></div></div>';
+        if(data.imageUrl){
+            html+='<img class="result-image" src="'+data.imageUrl+'" alt="'+data.scene+'">';
+            html+='<div style="text-align:center"><a class="dl-btn" href="'+data.imageUrl+'" download="calming_'+data.scene+'.png">⬇️ Скачать</a></div>';
+        }
+        if(data.imageError) html+='<div class="notice error">❌ '+data.imageError+'</div>';
+        html+='<details class="prompt-box"><summary>📝 Промпт</summary><div class="prompt-text" id="'+pid+'">'+data.prompt+'</div><button class="copy-btn" onclick="copyText(this,\''+pid+'\')">📋 Копировать</button></details>';
+        html+='</div>';
 
-        html+='<div class="notice info" style="margin-top:12px">💡 Для видео: используйте этот промпт в <a href="https://lumalabs.ai/dream-machine" target="_blank">Luma</a>, <a href="https://pika.art" target="_blank">Pika</a> или <a href="https://runwayml.com" target="_blank">Runway</a></div>';
-
+        // Экспорт
+        html+=buildExportPanel([data],'Успокоение '+data.scene,'calming');
         results.innerHTML=html;
-
     }catch(e){
         loading.classList.remove('show');
         results.innerHTML='<div class="notice error">❌ Ошибка: '+e.message+'</div>';
     }
 }
 
-// ====== ЗАПУСК ======
-document.addEventListener('DOMContentLoaded',function(){
-    console.log('🧩 NeuroVisual Helper v2.0 загружается...');
-    loadData();
-});
-</script>
-<script>
-// ============================================
-// ЭКСПОРТ ФУНКЦИИ
-// ============================================
-
-// Скачать PDF из карточек
-async function exportPDF(cards, title, type) {
-    if (!cards || !cards.length) {
-        alert('Сначала сгенерируйте карточки!');
-        return;
-    }
-
-    const btn = event.target;
-    const oldText = btn.textContent;
-    btn.textContent = '⏳ Создаём PDF...';
-    btn.disabled = true;
-
-    try {
-        const res = await fetch('/api/export/pdf', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ cards, title, type })
-        });
-
-        if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || 'Ошибка');
-        }
-
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = (title || 'cards') + '_' + Date.now() + '.pdf';
-        a.click();
-        URL.revokeObjectURL(url);
-
-        btn.textContent = '✅ Скачано!';
-        setTimeout(() => { btn.textContent = oldText; btn.disabled = false; }, 2000);
-    } catch (err) {
-        alert('Ошибка: ' + err.message);
-        btn.textContent = oldText;
-        btn.disabled = false;
-    }
-}
-
-// Скачать одну картинку
-function downloadImage(imageUrl, name) {
-    const a = document.createElement('a');
-    a.href = imageUrl;
-    a.download = (name || 'card') + '.jpg';
-    a.click();
-}
-
-// Хранилище последних сгенерированных карточек
-let lastPecsCards = [];
-let lastStorySteps = [];
-let lastEmotionCard = null;
-let lastCalmingCard = null;
-
-// Перехватываем результаты генерации — добавляем кнопки экспорта
-const _origFetch = window.fetch;
-window.fetch = async function(...args) {
-    const res = await _origFetch.apply(this, args);
-
-    // Клонируем ответ чтобы прочитать тело
-    const clone = res.clone();
-
-    try {
-        const url = typeof args[0] === 'string' ? args[0] : args[0].url;
-
-        if (url && url.includes('/api/generate/')) {
-            const data = await clone.json();
-
-            if (url.includes('/pecs') && data.cards) {
-                lastPecsCards = data.cards;
-                setTimeout(() => addExportButton('pecs'), 500);
-            }
-            if (url.includes('/story') && data.steps) {
-                lastStorySteps = data.steps;
-                setTimeout(() => addExportButton('story'), 500);
-            }
-            if (url.includes('/emotion') && data.imageUrl) {
-                lastEmotionCard = data;
-                setTimeout(() => addExportButton('emotion'), 500);
-            }
-            if (url.includes('/calming') && data.imageUrl) {
-                lastCalmingCard = data;
-                setTimeout(() => addExportButton('calming'), 500);
-            }
-        }
-    } catch (e) {}
-
-    return res;
-};
-
-function addExportButton(type) {
-    // Удаляем старую кнопку если есть
-    const oldBtn = document.getElementById('export-btn-' + type);
-    if (oldBtn) oldBtn.remove();
-
-    let container, cards, title, cardType;
-
-    switch (type) {
-        case 'pecs':
-            container = document.getElementById('pr') || document.querySelector('[id*="pecs"] .cg, [id*="pecs"] .cards')?.parentElement;
-            cards = lastPecsCards;
-            title = 'PECS Карточки';
-            cardType = 'pecs';
-            break;
-        case 'story':
-            container = document.getElementById('str') || document.querySelector('[id*="stor"] .cg, [id*="stor"] .cards')?.parentElement;
-            cards = lastStorySteps;
-            title = 'Социальная история';
-            cardType = 'story';
-            break;
-        case 'emotion':
-            container = document.getElementById('er') || document.querySelector('[id*="emo"] .sr')?.parentElement;
-            cards = lastEmotionCard ? [lastEmotionCard] : [];
-            title = 'Эмоция - ' + (lastEmotionCard?.emotion || '');
-            cardType = 'emotion';
-            break;
-        case 'calming':
-            container = document.getElementById('cr') || document.querySelector('[id*="calm"] .sr')?.parentElement;
-            cards = lastCalmingCard ? [lastCalmingCard] : [];
-            title = 'Успокоение - ' + (lastCalmingCard?.scene || '');
-            cardType = 'calming';
-            break;
-    }
-
-    if (!container || !cards || !cards.length) return;
-
-    // Создаём панель экспорта
-    const panel = document.createElement('div');
-    panel.id = 'export-btn-' + type;
-    panel.style.cssText = 'display:flex;gap:10px;margin-top:15px;padding:15px;background:linear-gradient(135deg,#f0f4ff,#faf0ff);border:2px solid #667eea;border-radius:12px;flex-wrap:wrap;align-items:center';
-
-    panel.innerHTML = `
-        <span style="font-size:20px">📄</span>
-        <span style="font-weight:600;color:#4a5568;font-size:14px">Экспорт:</span>
-        <button onclick="exportPDF(${JSON.stringify(cards).replace(/"/g, '&quot;')}, '${title}', '${cardType}')" 
-                style="padding:10px 20px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s">
-            📄 Скачать PDF
-        </button>
-        <button onclick="exportAllImages()" 
-                style="padding:10px 20px;background:linear-gradient(135deg,#48bb78,#38a169);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s">
-            🖼️ Скачать картинки
-        </button>
-        <span style="font-size:12px;color:#718096">${cards.length} шт.</span>
-    `;
-
-    container.appendChild(panel);
-}
-
-function exportAllImages() {
-    const allCards = [...lastPecsCards, ...lastStorySteps];
-    if (lastEmotionCard) allCards.push(lastEmotionCard);
-    if (lastCalmingCard) allCards.push(lastCalmingCard);
-
-    let count = 0;
-    allCards.forEach((card, i) => {
-        if (card.imageUrl) {
-            setTimeout(() => {
-                downloadImage(card.imageUrl, (card.text || card.scene || card.emotion || 'card') + '_' + i);
-            }, i * 500);
-            count++;
-        }
-    });
-
-    if (count === 0) alert('Нет картинок для скачивания. Сначала сгенерируйте с картинками!');
-}
+document.addEventListener('DOMContentLoaded',function(){console.log('🧩 NeuroVisual Helper v6.1');loadData()});
 </script>
 </body>
 </html>
